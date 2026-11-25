@@ -1,0 +1,618 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Propuesta 1 · Paso a paso — Mi Cita</title>
+<style>
+  :root {
+    --fondo: #FFF8EC;
+    --tarjeta: #FFFFFF;
+    --texto: #1A1A1A;          /* sobre fondo: más de 15:1 */
+    --suave: #4A4036;          /* texto secundario: más de 9:1 */
+    --acento: #0B3C9E;         /* azul fuerte; sobre blanco más de 10:1 */
+    --acento-osc: #082B73;
+    --linea: #CBBFA9;
+    --ok: #0B5D2A;
+    --ok-fondo: #E3F4E8;
+    --alerta: #8A2400;
+    --alerta-fondo: #FDEBE1;
+  }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { margin: 0; height: 100%; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    font-size: 20px; line-height: 1.4; color: var(--texto);
+    background: #EDE4D3;
+  }
+  button { font: inherit; color: inherit; cursor: pointer; }
+  :focus-visible { outline: 4px solid #F2A900; outline-offset: 3px; }
+
+  /* ---------- Presentación en escritorio ---------- */
+  .escena { min-height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 24px 16px; gap: 18px; }
+  .cabecera { text-align: center; max-width: 560px; }
+  .cabecera h1 { margin: 0 0 6px; font-size: 26px; }
+  .cabecera p { margin: 0; font-size: 17px; color: var(--suave); }
+  .telefono { width: 390px; height: 800px; background: var(--fondo); border-radius: 44px; border: 10px solid #222; box-shadow: 0 24px 60px rgba(0,0,0,.28); overflow: hidden; position: relative; }
+
+  /* ---------- App ---------- */
+  .app { position: relative; width: 100%; height: 100%; overflow: hidden; background: var(--fondo); }
+  .pantalla {
+    position: absolute; inset: 0; display: flex; flex-direction: column;
+    padding: 14px 20px 20px; overflow-y: auto; overflow-x: hidden;
+    opacity: 0; visibility: hidden; transform: translateX(28px);
+    transition: opacity .22s ease, transform .22s ease, visibility 0s linear .22s;
+  }
+  .pantalla.activa { opacity: 1; visibility: visible; transform: none; transition: opacity .22s ease, transform .22s ease; }
+  .pantalla.sale { transform: translateX(-28px); }
+
+  .barra { display: flex; align-items: center; justify-content: space-between; min-height: 64px; gap: 10px; margin-bottom: 6px; }
+  .atras {
+    min-height: 60px; min-width: 60px; padding: 0 18px 0 12px; border-radius: 16px; border: 3px solid var(--acento);
+    background: var(--tarjeta); color: var(--acento); font-weight: 800; font-size: 20px; display: inline-flex; align-items: center; gap: 6px;
+  }
+  .atras:active { background: #E7EEFB; }
+  .atras svg { width: 26px; height: 26px; }
+  .paso { font-weight: 800; font-size: 20px; color: var(--acento); text-align: right; }
+  .puntos { display: flex; gap: 6px; margin: 0 0 14px; }
+  .puntos i { flex: 1; height: 10px; border-radius: 6px; background: #E2D6BF; }
+  .puntos i.on { background: var(--acento); }
+
+  h2.pregunta { font-size: 34px; line-height: 1.12; font-weight: 900; letter-spacing: -.5px; margin: 6px 0 12px; }
+  h2.pregunta.mediano { font-size: 30px; }
+  .ayuda { font-size: 20px; color: var(--suave); margin: 0 0 16px; }
+  .marca { display: flex; align-items: center; gap: 10px; font-weight: 900; font-size: 24px; color: var(--acento); }
+  .marca svg { width: 40px; height: 40px; }
+
+  .opciones { display: flex; flex-direction: column; gap: 14px; margin-top: 6px; }
+  .grande {
+    width: 100%; min-height: 72px; padding: 14px 18px; border-radius: 18px; border: 3px solid var(--acento);
+    background: var(--tarjeta); color: var(--acento); font-weight: 900; font-size: 24px; text-align: left;
+    display: flex; align-items: center; gap: 14px; transition: transform .1s ease, background .15s;
+  }
+  .grande:active { transform: scale(.98); background: #E7EEFB; }
+  .grande .ico { width: 36px; height: 36px; flex: none; }
+  .grande .sub { display: block; font-weight: 600; font-size: 18px; color: var(--suave); }
+  .grande .flecha { margin-left: auto; width: 28px; height: 28px; flex: none; }
+  .primario { background: var(--acento); color: #fff; border-color: var(--acento); justify-content: center; text-align: center; }
+  .primario:active { background: var(--acento-osc); }
+  .secundario { justify-content: center; }
+  .peligro { border-color: var(--alerta); color: var(--alerta); justify-content: center; }
+  .discreto { min-height: 60px; background: transparent; border: 2px dashed var(--linea); border-radius: 14px; color: var(--suave); font-size: 18px; font-weight: 600; padding: 10px 14px; width: 100%; }
+  .elegida { background: var(--acento) !important; color: #fff !important; }
+  .elegida .sub { color: #fff; }
+  .marca-ok { margin-left: auto; width: 32px; height: 32px; flex: none; display: none; }
+  .elegida .marca-ok { display: block; }
+
+  .empuja { margin-top: auto; padding-top: 18px; display: flex; flex-direction: column; gap: 12px; }
+
+  /* Formulario */
+  label.campo { display: block; font-weight: 800; font-size: 20px; margin: 12px 0 6px; }
+  .entrada { width: 100%; min-height: 64px; font: inherit; font-size: 22px; padding: 10px 14px; border: 3px solid #5C5246; border-radius: 14px; background: #fff; color: var(--texto); }
+  .entrada:focus { border-color: var(--acento); outline: 4px solid #BFD1F5; }
+  .nota { font-size: 18px; color: var(--suave); margin: 10px 0 0; }
+
+  /* Tarjetas */
+  .tarjeta { background: var(--tarjeta); border: 3px solid var(--linea); border-radius: 18px; padding: 16px; margin-bottom: 14px; }
+  .tarjeta h3 { margin: 0 0 6px; font-size: 24px; font-weight: 900; }
+  .tarjeta p { margin: 2px 0; font-size: 20px; }
+  .etiqueta { display: inline-block; font-weight: 800; font-size: 18px; padding: 4px 12px; border-radius: 999px; border: 2px solid; margin-bottom: 8px; }
+  .e-ok { color: var(--ok); background: var(--ok-fondo); border-color: var(--ok); }
+  .e-busca { color: var(--acento); background: #E7EEFB; border-color: var(--acento); }
+  .seccion { font-size: 26px; font-weight: 900; margin: 14px 0 10px; }
+  .vacio { font-size: 20px; color: var(--suave); margin: 0 0 14px; }
+
+  /* Buscando */
+  .radar { width: 150px; height: 150px; margin: 8px auto 14px; position: relative; }
+  .radar span { position: absolute; inset: 0; border-radius: 50%; border: 5px solid var(--acento); opacity: 0; animation: onda 2.6s ease-out infinite; }
+  .radar span:nth-child(2) { animation-delay: .87s; }
+  .radar span:nth-child(3) { animation-delay: 1.74s; }
+  .radar svg { position: absolute; inset: 38px; width: 74px; height: 74px; }
+  @keyframes onda { 0% { transform: scale(.45); opacity: .9; } 100% { transform: scale(1); opacity: 0; } }
+  .centro { text-align: center; }
+
+  /* Reservada */
+  .sello { width: 96px; height: 96px; border-radius: 50%; background: var(--ok); margin: 0 auto 10px; display: grid; place-items: center; }
+  .sello svg { width: 58px; height: 58px; }
+  .dato { display: flex; gap: 12px; padding: 10px 0; border-bottom: 2px solid #EFE6D4; font-size: 21px; }
+  .dato:last-child { border-bottom: 0; }
+  .dato b { min-width: 98px; color: var(--suave); font-weight: 800; }
+  .dato span { font-weight: 800; }
+
+  /* Error */
+  .aviso { background: var(--alerta-fondo); border: 3px solid var(--alerta); border-radius: 18px; padding: 18px; margin: 10px 0 8px; }
+  .aviso b { color: var(--alerta); }
+
+  /* Dos columnas para días */
+  .rejilla { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .rejilla .grande { font-size: 22px; padding: 10px 14px; min-height: 64px; }
+
+  /* Rango de fechas */
+  .panel-fechas { background: var(--tarjeta); border: 3px solid var(--acento); border-radius: 18px; padding: 6px 16px 16px; margin-top: 14px; }
+  .panel-fechas[hidden] { display: none; }
+  .error-campo { color: var(--alerta); font-weight: 800; font-size: 20px; margin: 10px 0 0; }
+  .error-campo[hidden] { display: none; }
+
+  /* Antes / Ahora */
+  .antes { border-color: var(--alerta); background: #fff; }
+  .antes .tachado { text-decoration: line-through; text-decoration-thickness: 3px; }
+  .ahora { border-color: var(--ok); background: var(--ok-fondo); }
+  .e-antes { color: var(--alerta); background: var(--alerta-fondo); border-color: var(--alerta); }
+  .pregunta-mejora { margin-top: 4px; }
+
+  .toast { position: absolute; left: 16px; right: 16px; bottom: 16px; background: #1A1A1A; color: #fff; border-radius: 16px; padding: 14px 16px; font-weight: 700; font-size: 20px; opacity: 0; pointer-events: none; transform: translateY(12px); transition: .2s; z-index: 5; }
+  .toast.ver { opacity: 1; transform: none; }
+
+  /* ---------- Celular real: sin marco ---------- */
+  @media (max-width: 520px) {
+    body { background: var(--fondo); }
+    .escena { padding: 0; display: block; height: 100%; }
+    .cabecera { display: none; }
+    .telefono { width: 100%; height: 100%; border: 0; border-radius: 0; box-shadow: none; }
+  }
+  @media (max-width: 360px) {
+    h2.pregunta { font-size: 30px; }
+    .grande { font-size: 22px; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .pantalla, .grande, .toast { transition: none; }
+    .radar span { animation: none; opacity: .4; }
+  }
+</style>
+</head>
+<body>
+<div class="escena">
+  <header class="cabecera">
+    <h1>Propuesta 1 · «Paso a paso»</h1>
+    <p>Una sola pregunta por pantalla, botones gigantes y un indicador de pasos: se siente como un cajero automático bien hecho. Todos los datos son de mentira.</p>
+  </header>
+
+  <div class="telefono"><div class="app" id="app">
+
+    <!-- 1. ENTRAR -->
+    <section class="pantalla" id="entrar" aria-label="Entrar">
+      <div class="barra"><div class="marca"><svg viewBox="0 0 40 40" aria-hidden="true"><rect x="3" y="6" width="34" height="31" rx="8" fill="#0B3C9E"/><rect x="3" y="6" width="34" height="10" rx="5" fill="#082B73"/><path d="M12 25l6 6 11-12" fill="none" stroke="#fff" stroke-width="4.5" stroke-linecap="round" stroke-linejoin="round"/></svg>Mi Cita</div></div>
+      <h2 class="pregunta">Entre con sus datos</h2>
+      <p class="ayuda">Use el mismo documento y clave de su EPS.</p>
+      <form id="formEntrar" novalidate>
+        <label class="campo" for="tipoDoc">Tipo de documento</label>
+        <select class="entrada" id="tipoDoc">
+          <option>Cédula de ciudadanía</option>
+          <option>Tarjeta de identidad</option>
+          <option>Cédula de extranjería</option>
+          <option>Pasaporte</option>
+        </select>
+        <label class="campo" for="numDoc">Número de documento</label>
+        <input class="entrada" id="numDoc" inputmode="numeric" autocomplete="off" placeholder="Ejemplo: 12345678">
+        <label class="campo" for="clave">Clave</label>
+        <input class="entrada" id="clave" type="password" autocomplete="off" placeholder="Su clave">
+        <div class="empuja">
+          <button type="submit" class="grande primario">Entrar</button>
+        </div>
+      </form>
+    </section>
+
+    <!-- 2. INICIO -->
+    <section class="pantalla" id="inicio" aria-label="Inicio">
+      <div class="barra"><div class="marca"><svg viewBox="0 0 40 40" aria-hidden="true"><rect x="3" y="6" width="34" height="31" rx="8" fill="#0B3C9E"/><rect x="3" y="6" width="34" height="10" rx="5" fill="#082B73"/><path d="M12 25l6 6 11-12" fill="none" stroke="#fff" stroke-width="4.5" stroke-linecap="round" stroke-linejoin="round"/></svg>Mi Cita</div></div>
+      <h2 class="pregunta">Buenos días,<br>doña Marta</h2>
+      <p class="ayuda">¿Qué desea hacer hoy?</p>
+      <div class="opciones">
+        <button class="grande primario" data-ir="servicio" data-nuevo="1">
+          <svg class="ico" viewBox="0 0 36 36" aria-hidden="true"><path d="M18 6v24M6 18h24" stroke="#fff" stroke-width="6" stroke-linecap="round"/></svg>Pedir una cita</button>
+        <button class="grande" data-ir="mis">
+          <svg class="ico" viewBox="0 0 36 36" aria-hidden="true"><rect x="5" y="8" width="26" height="23" rx="5" fill="none" stroke="#0B3C9E" stroke-width="3.5"/><path d="M5 15h26M12 4v7M24 4v7" stroke="#0B3C9E" stroke-width="3.5" stroke-linecap="round"/></svg>Ver mis citas</button>
+      </div>
+      <div class="empuja">
+        <button class="grande secundario" data-ir="entrar" data-salir="1">Salir</button>
+        <button class="discreto" data-ir="error">Ver ejemplo de aviso: se cerró la sesión</button>
+      </div>
+    </section>
+
+    <!-- 3. SERVICIO (paso 1 de 4) -->
+    <section class="pantalla" id="servicio" aria-label="Qué cita necesita">
+      <div class="barra"><button class="atras" data-atras><svg viewBox="0 0 26 26" aria-hidden="true"><path d="M16 4L7 13l9 9" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/></svg>Atrás</button><div class="paso">Paso 1 de 4</div></div>
+      <div class="puntos" aria-hidden="true"><i class="on"></i><i></i><i></i><i></i></div>
+      <h2 class="pregunta">¿Qué cita necesita?</h2>
+      <div class="opciones" id="listaServicios"></div>
+    </section>
+
+    <!-- 4. HORARIO (paso 2 de 4) -->
+    <section class="pantalla" id="horario" aria-label="A qué hora le sirve">
+      <div class="barra"><button class="atras" data-atras><svg viewBox="0 0 26 26" aria-hidden="true"><path d="M16 4L7 13l9 9" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/></svg>Atrás</button><div class="paso">Paso 2 de 4</div></div>
+      <div class="puntos" aria-hidden="true"><i class="on"></i><i class="on"></i><i></i><i></i></div>
+      <h2 class="pregunta">¿A qué hora le sirve?</h2>
+      <div class="opciones" id="listaHorario"></div>
+    </section>
+
+    <!-- 5. DESDE (paso 3 de 4) -->
+    <section class="pantalla" id="desde" aria-label="Para cuándo necesita la cita">
+      <div class="barra"><button class="atras" data-atras><svg viewBox="0 0 26 26" aria-hidden="true"><path d="M16 4L7 13l9 9" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/></svg>Atrás</button><div class="paso">Paso 3 de 4</div></div>
+      <div class="puntos" aria-hidden="true"><i class="on"></i><i class="on"></i><i class="on"></i><i></i></div>
+      <h2 class="pregunta">¿Para cuándo necesita la cita?</h2>
+      <p class="ayuda">Escoja un plazo. Buscamos dentro de esas fechas.</p>
+      <div class="opciones" id="listaDesde"></div>
+      <div class="panel-fechas" id="panelFechas" hidden>
+        <label class="campo" for="fDesde">Desde</label>
+        <input class="entrada" type="date" id="fDesde" min="2026-11-25">
+        <label class="campo" for="fHasta">Hasta</label>
+        <input class="entrada" type="date" id="fHasta" min="2026-11-25">
+        <p class="error-campo" id="errFechas" role="alert" hidden></p>
+        <div class="empuja"><button type="button" class="grande primario" id="siFechas">Continuar</button></div>
+      </div>
+    </section>
+
+    <!-- 6. DÍAS (paso 4 de 4) -->
+    <section class="pantalla" id="dias" aria-label="Qué días de la semana">
+      <div class="barra"><button class="atras" data-atras><svg viewBox="0 0 26 26" aria-hidden="true"><path d="M16 4L7 13l9 9" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/></svg>Atrás</button><div class="paso">Paso 4 de 4</div></div>
+      <div class="puntos" aria-hidden="true"><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i></div>
+      <h2 class="pregunta mediano">¿Qué días le sirven?</h2>
+      <p class="ayuda">Toque los días que le sirven. Si no escoge ninguno, buscamos en cualquier día.</p>
+      <div class="rejilla" id="listaDias"></div>
+      <div class="empuja">
+        <button class="grande primario" id="empezar">Empezar a buscar</button>
+      </div>
+    </section>
+
+    <!-- 7. BUSCANDO -->
+    <section class="pantalla" id="buscando" aria-label="Buscando su cita">
+      <div class="barra"><div class="paso" style="text-align:left;color:var(--ok)">Búsqueda activa</div></div>
+      <div class="radar" aria-hidden="true"><span></span><span></span><span></span>
+        <svg viewBox="0 0 74 74"><circle cx="31" cy="31" r="20" fill="none" stroke="#0B3C9E" stroke-width="7"/><path d="M46 46l18 18" stroke="#0B3C9E" stroke-width="8" stroke-linecap="round"/></svg></div>
+      <h2 class="pregunta centro">Estamos buscando su cita</h2>
+      <div class="tarjeta">
+        <p><b id="resServicio">Medicina general</b></p>
+        <p id="resRango">Busco entre el 25 de noviembre y el 9 de diciembre</p>
+        <p id="resCuando">Por la mañana · Cualquier día</p>
+      </div>
+      <p class="ayuda centro">Puede cerrar la aplicación. <b>Le avisaremos</b> apenas la consigamos.</p>
+      <div class="empuja">
+        <button class="grande secundario" data-ir="mis" data-limpiar="1">Ver mis citas</button>
+        <button class="grande peligro" id="detener">Detener la búsqueda</button>
+        <button class="discreto" id="simular">Simular: apareció una cita</button>
+      </div>
+    </section>
+
+    <!-- 8. CITA RESERVADA -->
+    <section class="pantalla" id="reservada" aria-label="Cita reservada">
+      <div class="barra"><div class="paso" style="text-align:left;color:var(--ok)">Listo</div></div>
+      <div class="sello" aria-hidden="true"><svg viewBox="0 0 58 58"><path d="M12 30l12 12 22-24" fill="none" stroke="#fff" stroke-width="8" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+      <h2 class="pregunta centro">¡Su cita quedó reservada!</h2>
+      <div class="tarjeta" id="detalleCita"></div>
+      <p class="nota centro">Le recordaremos un día antes.</p>
+      <div class="empuja">
+        <button class="grande primario" id="irMejora">Continuar</button>
+      </div>
+    </section>
+
+    <!-- 8b. ¿SEGUIR BUSCANDO UNA MÁS CERCANA? -->
+    <section class="pantalla" id="mejora" aria-label="Seguir buscando una cita más cercana">
+      <div class="barra"><div class="paso" style="text-align:left;color:var(--ok)">Una última pregunta</div></div>
+      <h2 class="pregunta mediano">¿Quiere que siga buscando una cita más cercana?</h2>
+      <p class="ayuda" id="textoMejora">Su cita queda guardada. Si aparece una antes, se la cambio y le aviso.</p>
+      <div class="tarjeta" id="miniMejora"></div>
+      <div class="empuja">
+        <button class="grande primario" id="mejoraSi">Sí, siga buscando</button>
+        <button class="grande secundario" id="mejoraNo">No, esta me sirve</button>
+      </div>
+    </section>
+
+    <!-- 8c. RESERVADA Y SIGO BUSCANDO -->
+    <section class="pantalla" id="sigue" aria-label="Cita reservada y búsqueda de una más cercana">
+      <div class="barra"><div class="paso" style="text-align:left;color:var(--ok)">Búsqueda activa</div></div>
+      <h2 class="pregunta mediano">Su cita está reservada y sigo buscando una más cercana</h2>
+      <div class="tarjeta" id="detalleSigue"></div>
+      <p class="ayuda">Si aparece una antes, se la cambio y <b>le aviso</b>. Mientras tanto, esta cita es suya.</p>
+      <div class="empuja">
+        <button class="grande secundario" id="sigueInicio">Volver al inicio</button>
+        <button class="grande peligro" id="dejarBuscar">Dejar de buscar</button>
+        <button class="discreto" id="simularCercana">Simular: apareció una más cercana</button>
+      </div>
+    </section>
+
+    <!-- 8d. LE CONSEGUÍ UNA MÁS CERCANA -->
+    <section class="pantalla" id="cercana" aria-label="Cita más cercana conseguida">
+      <div class="barra"><div class="paso" style="text-align:left;color:var(--ok)">Buena noticia</div></div>
+      <h2 class="pregunta mediano">Le conseguí una cita más cercana</h2>
+      <div class="tarjeta antes" id="citaAntes"></div>
+      <div class="tarjeta ahora" id="citaAhora"></div>
+      <p class="ayuda pregunta-mejora"><b>¿Quiere que siga buscando una más cercana?</b></p>
+      <div class="empuja">
+        <button class="grande primario" id="cercanaSi">Sí, siga buscando</button>
+        <button class="grande secundario" id="cercanaNo">No, esta me sirve</button>
+      </div>
+    </section>
+
+    <!-- 9. MIS CITAS -->
+    <section class="pantalla" id="mis" aria-label="Mis citas">
+      <div class="barra"><button class="atras" data-atras><svg viewBox="0 0 26 26" aria-hidden="true"><path d="M16 4L7 13l9 9" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/></svg>Atrás</button></div>
+      <h2 class="pregunta">Mis citas</h2>
+      <div class="seccion">Citas reservadas</div>
+      <div id="listaReservadas"></div>
+      <div class="seccion">Búsquedas activas</div>
+      <div id="listaBusquedas"></div>
+      <div class="empuja">
+        <button class="grande primario" data-ir="servicio" data-nuevo="1">Pedir otra cita</button>
+      </div>
+    </section>
+
+    <!-- 10. ERROR AMABLE -->
+    <section class="pantalla" id="error" aria-label="Aviso">
+      <div class="barra"><button class="atras" data-atras><svg viewBox="0 0 26 26" aria-hidden="true"><path d="M16 4L7 13l9 9" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/></svg>Atrás</button></div>
+      <h2 class="pregunta">Se cerró su sesión</h2>
+      <div class="aviso">
+        <p style="margin:0 0 8px"><b>No se preocupe, no perdió nada.</b></p>
+        <p style="margin:0">Por su seguridad, la sesión se cierra sola. Sus búsquedas siguen activas. Solo debe entrar de nuevo.</p>
+      </div>
+      <div class="empuja">
+        <button class="grande primario" data-ir="entrar" data-salir="1">Entrar de nuevo</button>
+      </div>
+    </section>
+
+    <div class="toast" id="toast" role="status" aria-live="polite"></div>
+  </div></div>
+</div>
+
+<script>
+(function () {
+  'use strict';
+  // ---------- Datos de mentira ----------
+  var SERVICIOS = ['Medicina general', 'Odontología', 'Optometría', 'Pediatría', 'Otra especialidad'];
+  var HORARIOS = [
+    { t: 'Por la mañana', s: 'Antes de las 12:00' },
+    { t: 'Por la tarde', s: 'Después de las 12:00' },
+    { t: 'A cualquier hora', s: 'Lo que primero aparezca' }
+  ];
+  // Fechas de mentira: en esta maqueta «hoy» es el 24 de noviembre de 2026
+  var MESES = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'];
+  var RANGOS = [
+    { t: 'Lo antes posible', s: 'Próximos 7 días', d: [2026, 11, 25], h: [2026, 12, 1] },
+    { t: 'En los próximos 15 días', s: '', d: [2026, 11, 25], h: [2026, 12, 9] },
+    { t: 'Este mes', s: 'Hasta fin de mes', d: [2026, 11, 25], h: [2026, 11, 30] }
+  ];
+  var MEJORAS = [
+    { fecha: 'Viernes 27 de noviembre', hora: '8:45 a. m.', sede: 'Sede Norte, Carrera 15 # 80-10', profe: 'Dr. Andrés Mejía' },
+    { fecha: 'Jueves 26 de noviembre', hora: '3:30 p. m.', sede: 'Sede Centro, Calle 10 # 5-20', profe: 'Dra. Paula Rincón' }
+  ];
+  var SEDES = ['Sede Centro, Calle 10 # 5-20', 'Sede Norte, Carrera 15 # 80-10', 'Sede Sur, Avenida 30 # 12-45'];
+  var DIAS = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
+    var PROFES = ['Dra. Lucía Herrera', 'Dr. Andrés Mejía', 'Dra. Paula Rincón'];
+
+  var estado = {
+    pila: [], actual: 'entrar',
+    elegido: { servicio: null, horario: null, rango: null, dias: [] },
+    reservadas: [
+      { servicio: 'Odontología', fecha: 'Martes 8 de diciembre', hora: '9:30 a. m.', sede: SEDES[0], profe: 'Dr. Andrés Mejía' },
+      { servicio: 'Optometría', fecha: 'Jueves 17 de diciembre', hora: '2:00 p. m.', sede: SEDES[1], profe: 'Dra. Paula Rincón' }
+    ],
+    busquedas: [{ servicio: 'Pediatría', rango: 'Busco entre el 30 de noviembre y el 14 de diciembre', cuando: 'Cualquier hora · Cualquier día' }],
+    actualBusqueda: null, citaActual: null, nMejora: 0
+  };
+
+  var app = document.getElementById('app');
+  var toastEl = document.getElementById('toast');
+  var toastT;
+
+  function $(id) { return document.getElementById(id); }
+  function aviso(txt) {
+    toastEl.textContent = txt; toastEl.classList.add('ver');
+    clearTimeout(toastT); toastT = setTimeout(function () { toastEl.classList.remove('ver'); }, 2600);
+  }
+  function esc(s) { return String(s).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); }
+
+  // ---------- Navegación ----------
+  function mostrar(id, empujar) {
+    var vieja = $(estado.actual), nueva = $(id);
+    if (!nueva) return;
+    if (empujar && estado.actual !== id) estado.pila.push(estado.actual);
+    if (vieja && vieja !== nueva) { vieja.classList.remove('activa'); vieja.classList.add('sale'); setTimeout(function () { vieja.classList.remove('sale'); }, 240); }
+    nueva.classList.remove('sale'); nueva.scrollTop = 0;
+    // forzar reflujo para que la animación de entrada corra
+    void nueva.offsetWidth;
+    nueva.classList.add('activa');
+    estado.actual = id;
+    if (id === 'mis') pintarMis();
+    var h = nueva.querySelector('h2'); if (h) { h.setAttribute('tabindex', '-1'); try { h.focus({ preventScroll: true }); } catch (e) {} }
+  }
+  function atras() {
+    var prev = estado.pila.pop();
+    if (!prev) { return; }
+    mostrar(prev, false);
+  }
+
+  // ---------- Botones de opciones ----------
+  var ICO_FLECHA = '<svg class="flecha" viewBox="0 0 28 28" aria-hidden="true"><path d="M10 4l10 10-10 10" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+  var ICO_OK = '<svg class="marca-ok" viewBox="0 0 32 32" aria-hidden="true"><path d="M7 17l7 7 12-14" fill="none" stroke="#fff" stroke-width="4.5" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+
+  function lista(idContenedor, items, alElegir) {
+    var c = $(idContenedor); c.innerHTML = '';
+    items.forEach(function (it) {
+      var b = document.createElement('button');
+      b.className = 'grande'; b.type = 'button';
+      var t = typeof it === 'string' ? it : it.t, s = typeof it === 'string' ? '' : it.s;
+      b.innerHTML = '<span>' + esc(t) + (s ? '<span class="sub">' + esc(s) + '</span>' : '') + '</span>' + ICO_FLECHA;
+      b.addEventListener('click', function () { alElegir(t); });
+      c.appendChild(b);
+    });
+  }
+  lista('listaServicios', SERVICIOS, function (t) { estado.elegido.servicio = t; mostrar('horario', true); });
+  lista('listaHorario', HORARIOS, function (t) { estado.elegido.horario = t; mostrar('desde', true); });
+  function fechaTxt(a) { return a[2] + ' de ' + MESES[a[1] - 1]; }
+  function rangoTxt(d, h) { return 'Busco entre el ' + d + ' y el ' + h; }
+  function aArr(v) { var p = v.split('-'); return [+p[0], +p[1], +p[2]]; }
+  var panel = $('panelFechas'), fD = $('fDesde'), fH = $('fHasta'), errF = $('errFechas');
+  var cr = $('listaDesde');
+  function marcarRango(btn) {
+    Array.prototype.forEach.call(cr.children, function (b) { b.classList.remove('elegida'); b.setAttribute('aria-pressed', 'false'); });
+    if (btn) { btn.classList.add('elegida'); btn.setAttribute('aria-pressed', 'true'); }
+  }
+  RANGOS.forEach(function (r) {
+    var b = document.createElement('button');
+    b.className = 'grande'; b.type = 'button'; b.setAttribute('aria-pressed', 'false');
+    var etq = r.t + (r.s ? ' (' + r.s.toLowerCase() + ')' : '');
+    b.innerHTML = '<span>' + esc(r.t) + (r.s ? '<span class="sub">' + esc(r.s) + ' · del ' + esc(fechaTxt(r.d)) + ' al ' + esc(fechaTxt(r.h)) + '</span>' : '<span class="sub">Del ' + esc(fechaTxt(r.d)) + ' al ' + esc(fechaTxt(r.h)) + '</span>') + '</span>' + ICO_FLECHA;
+    b.title = etq;
+    b.addEventListener('click', function () {
+      panel.hidden = true; marcarRango(b);
+      estado.elegido.rango = rangoTxt(fechaTxt(r.d), fechaTxt(r.h));
+      mostrar('dias', true);
+    });
+    cr.appendChild(b);
+  });
+  var bEl = document.createElement('button');
+  bEl.className = 'grande'; bEl.type = 'button'; bEl.setAttribute('aria-pressed', 'false');
+  bEl.innerHTML = '<svg class="ico" viewBox="0 0 36 36" aria-hidden="true"><rect x="5" y="8" width="26" height="23" rx="5" fill="none" stroke="currentColor" stroke-width="3.5"/><path d="M5 15h26M12 4v7M24 4v7" stroke="currentColor" stroke-width="3.5" stroke-linecap="round"/></svg><span>Elegir fechas<span class="sub">Yo escojo desde y hasta</span></span>';
+  bEl.addEventListener('click', function () {
+    marcarRango(bEl); panel.hidden = false; errF.hidden = true;
+    setTimeout(function () { panel.scrollIntoView({ block: 'nearest', behavior: 'smooth' }); try { fD.focus({ preventScroll: true }); } catch (e) {} }, 60);
+  });
+  cr.appendChild(bEl);
+  $('siFechas').addEventListener('click', function () {
+    if (!fD.value || !fH.value) { errF.textContent = 'Falta escoger la fecha «Desde» y la fecha «Hasta».'; errF.hidden = false; return; }
+    if (fH.value < fD.value) { errF.textContent = 'La fecha «Hasta» no puede ser antes de la fecha «Desde».'; errF.hidden = false; return; }
+    errF.hidden = true;
+    estado.elegido.rango = rangoTxt(fechaTxt(aArr(fD.value)), fechaTxt(aArr(fH.value)));
+    mostrar('dias', true);
+  });
+
+  // Días de la semana (varios a la vez, con marca de verificación además del color)
+  var cd = $('listaDias');
+  DIAS.forEach(function (d) {
+    var b = document.createElement('button');
+    b.className = 'grande'; b.type = 'button'; b.setAttribute('aria-pressed', 'false'); b.dataset.dia = d;
+    b.innerHTML = '<span>' + d + '</span>' + ICO_OK;
+    b.addEventListener('click', function () {
+      var on = b.classList.toggle('elegida'); b.setAttribute('aria-pressed', on ? 'true' : 'false');
+    });
+    cd.appendChild(b);
+  });
+
+  function reiniciarFormulario() {
+    estado.elegido = { servicio: null, horario: null, rango: null, dias: [] };
+    marcarRango(null); panel.hidden = true; errF.hidden = true; fD.value = ''; fH.value = '';
+    Array.prototype.forEach.call(cd.children, function (b) { b.classList.remove('elegida'); b.setAttribute('aria-pressed', 'false'); });
+  }
+
+  // ---------- Acciones ----------
+  $('formEntrar').addEventListener('submit', function (e) {
+    e.preventDefault(); estado.pila = []; mostrar('inicio', false);
+  });
+
+  $('empezar').addEventListener('click', function () {
+    var sel = Array.prototype.filter.call(cd.children, function (b) { return b.classList.contains('elegida'); }).map(function (b) { return b.dataset.dia; });
+    var e = estado.elegido;
+    var cuando = e.horario + ' · ' + (sel.length ? sel.join(', ') : 'Cualquier día');
+    estado.actualBusqueda = { servicio: e.servicio, rango: e.rango, cuando: cuando };
+    $('resRango').textContent = e.rango;
+    estado.busquedas.push(estado.actualBusqueda);
+    $('resServicio').textContent = e.servicio;
+    $('resCuando').textContent = cuando;
+    mostrar('buscando', true);
+  });
+
+  $('detener').addEventListener('click', function () {
+    var i = estado.busquedas.indexOf(estado.actualBusqueda);
+    if (i >= 0) estado.busquedas.splice(i, 1);
+    estado.actualBusqueda = null; reiniciarFormulario();
+    estado.pila = ['inicio']; mostrar('inicio', false);
+    aviso('Detuvimos la búsqueda.');
+  });
+
+  function detalleHTML(cita, etiqueta, tachado) {
+    var t = tachado ? ' tachado' : '';
+    return etiqueta + '<h3>' + esc(cita.servicio) + '</h3>' +
+      '<div class="dato"><b>Fecha</b><span class="' + t + '">' + esc(cita.fecha) + '</span></div>' +
+      '<div class="dato"><b>Hora</b><span class="' + t + '">' + esc(cita.hora) + '</span></div>' +
+      '<div class="dato"><b>Sede</b><span class="' + t + '">' + esc(cita.sede) + '</span></div>' +
+      '<div class="dato"><b>Profesional</b><span class="' + t + '">' + esc(cita.profe) + '</span></div>';
+  }
+  var ETQ_SIGUE = '<span class="etiqueta e-busca">🔍 Reservada · buscando una más cercana</span>';
+
+  // ---------- Seguir buscando una más cercana ----------
+  $('irMejora').addEventListener('click', function () {
+    var c = estado.citaActual;
+    $('textoMejora').textContent = 'Su cita del ' + c.fecha.replace(/^[^ ]+ /, '') + ' queda guardada. Si aparece una antes, se la cambio y le aviso.';
+    $('miniMejora').innerHTML = '<h3>' + esc(c.servicio) + '</h3><p><b>' + esc(c.fecha) + '</b>, ' + esc(c.hora) + '</p>';
+    mostrar('mejora', false);
+  });
+  function seguirBuscando() {
+    var c = estado.citaActual; c.mejora = true;
+    $('detalleSigue').innerHTML = detalleHTML(c, ETQ_SIGUE);
+    mostrar('sigue', false);
+  }
+  function cerrarSinMejora() {
+    if (estado.citaActual) estado.citaActual.mejora = false;
+    estado.pila = []; mostrar('inicio', false);
+  }
+  $('mejoraSi').addEventListener('click', seguirBuscando);
+  $('mejoraNo').addEventListener('click', cerrarSinMejora);
+  $('cercanaSi').addEventListener('click', seguirBuscando);
+  $('cercanaNo').addEventListener('click', cerrarSinMejora);
+  $('sigueInicio').addEventListener('click', function () { estado.pila = []; mostrar('inicio', false); });
+  $('dejarBuscar').addEventListener('click', function () {
+    estado.citaActual.mejora = false; estado.pila = []; mostrar('inicio', false);
+    aviso('Dejé de buscar. Su cita sigue reservada.');
+  });
+  $('simularCercana').addEventListener('click', function () {
+    if (estado.nMejora >= MEJORAS.length) { aviso('Por ahora no hay una cita más cercana.'); return; }
+    var vieja = estado.citaActual, m = MEJORAS[estado.nMejora++];
+    var nueva = { servicio: vieja.servicio, fecha: m.fecha, hora: m.hora, sede: m.sede, profe: m.profe, mejora: false };
+    var i = estado.reservadas.indexOf(vieja);
+    if (i >= 0) estado.reservadas[i] = nueva; else estado.reservadas.unshift(nueva);
+    estado.citaActual = nueva;
+    $('citaAntes').innerHTML = detalleHTML(vieja, '<span class="etiqueta e-antes">Antes · cancelada</span>', true);
+    $('citaAhora').innerHTML = detalleHTML(nueva, '<span class="etiqueta e-ok">✔ Ahora · reservada</span>');
+    mostrar('cercana', false);
+  });
+
+  $('simular').addEventListener('click', function () {
+    var b = estado.actualBusqueda || { servicio: 'Medicina general' };
+    var i = estado.busquedas.indexOf(estado.actualBusqueda);
+    if (i >= 0) estado.busquedas.splice(i, 1);
+    var cita = { servicio: b.servicio, fecha: 'Miércoles 2 de diciembre', hora: '10:15 a. m.', sede: SEDES[2], profe: PROFES[0] };
+    cita.mejora = false;
+    estado.reservadas.unshift(cita);
+    estado.citaActual = cita; estado.nMejora = 0;
+    $('detalleCita').innerHTML = detalleHTML(cita, '<span class="etiqueta e-ok">✔ Reservada</span>');
+    estado.actualBusqueda = null; reiniciarFormulario();
+    estado.pila = ['inicio']; mostrar('reservada', false);
+  });
+
+  function pintarMis() {
+    var r = $('listaReservadas'), b = $('listaBusquedas');
+    r.innerHTML = estado.reservadas.length ? '' : '<p class="vacio">Todavía no tiene citas reservadas.</p>';
+    estado.reservadas.forEach(function (c) {
+      r.insertAdjacentHTML('beforeend',
+        '<div class="tarjeta">' + (c.mejora ? ETQ_SIGUE : '<span class="etiqueta e-ok">✔ Reservada</span>') + '<h3>' + esc(c.servicio) + '</h3>' +
+        '<p><b>' + esc(c.fecha) + '</b>, ' + esc(c.hora) + '</p><p>' + esc(c.sede) + '</p><p>' + esc(c.profe) + '</p></div>');
+    });
+    b.innerHTML = estado.busquedas.length ? '' : '<p class="vacio">No tiene búsquedas activas.</p>';
+    estado.busquedas.forEach(function (s, i) {
+      b.insertAdjacentHTML('beforeend',
+        '<div class="tarjeta"><span class="etiqueta e-busca">🔍 Buscando</span><h3>' + esc(s.servicio) + '</h3><p>' + esc(s.rango) + '</p><p>' + esc(s.cuando) + '</p>' +
+        '<button class="grande peligro" style="margin-top:12px" data-quitar="' + i + '">Detener esta búsqueda</button></div>');
+    });
+  }
+  $('listaBusquedas').addEventListener('click', function (e) {
+    var t = e.target.closest('[data-quitar]'); if (!t) return;
+    estado.busquedas.splice(+t.dataset.quitar, 1); pintarMis(); aviso('Detuvimos esa búsqueda.');
+  });
+
+  // Enlaces generales por atributos
+  app.addEventListener('click', function (e) {
+    var a = e.target.closest('[data-atras]');
+    if (a) { atras(); return; }
+    var t = e.target.closest('[data-ir]');
+    if (!t) return;
+    if (t.dataset.nuevo) reiniciarFormulario();
+    if (t.dataset.salir) { estado.pila = []; mostrar(t.dataset.ir, false); return; }
+    if (t.dataset.reinicio) { estado.pila = []; mostrar(t.dataset.ir, false); return; }
+    mostrar(t.dataset.ir, true);
+  });
+
+  // Arranque
+  $('entrar').classList.add('activa');
+})();
+</script>
+</body>
+</html>

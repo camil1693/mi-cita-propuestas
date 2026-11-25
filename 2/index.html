@@ -1,0 +1,717 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Mi Cita · Propuesta 2: Tablero</title>
+<style>
+:root{
+  --fondo:#F5F1E8;
+  --tarjeta:#FFFFFF;
+  --texto:#14213D;
+  --suave:#3B4A66;
+  --linea:#CBD2DC;
+  --primario:#0B4F5C;      /* verde azulado profundo */
+  --primario-oscuro:#083944;
+  --acento:#9A3A00;        /* naranja quemado cálido */
+  --acento-claro:#FFE9D6;
+  --ok-fondo:#DDF3E1;
+  --ok-texto:#0B4A1E;
+  --ambar-fondo:#FFEDBF;
+  --ambar-texto:#5A3600;
+  --err-fondo:#FBE3E0;
+  --err-texto:#7A1410;
+  --radio:22px;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%}
+body{
+  font-family:system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+  font-size:20px;line-height:1.45;color:var(--texto);
+  background:var(--fondo);
+  -webkit-text-size-adjust:100%;
+}
+button{font:inherit;color:inherit;cursor:pointer;border:0;background:none}
+:focus-visible{outline:4px solid var(--acento);outline-offset:3px}
+svg{display:block;flex:none}
+
+/* ===== Presentación en pantalla ancha ===== */
+.escenario{min-height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:0}
+.cabecera{display:none}
+.marco{width:100%;height:100vh;height:100dvh;position:relative}
+@media (min-width:600px) and (min-height:700px){
+  body{background:linear-gradient(160deg,#E9E2D2,#D6E3E4)}
+  .escenario{padding:28px 16px;gap:22px}
+  .cabecera{display:block;text-align:center;max-width:560px}
+  .cabecera h1{font-size:26px;line-height:1.2;margin-bottom:6px}
+  .cabecera p{font-size:17px;color:var(--suave)}
+  .marco{width:390px;height:800px;border-radius:44px;border:10px solid #1B2433;
+    box-shadow:0 30px 60px -20px rgba(20,33,61,.45);overflow:hidden;background:var(--fondo)}
+}
+.app{position:absolute;inset:0;overflow:hidden;background:var(--fondo)}
+
+/* ===== Pantallas ===== */
+.pantalla{position:absolute;inset:0;display:flex;flex-direction:column;
+  opacity:0;visibility:hidden;transform:translateX(24px);
+  transition:opacity .22s ease,transform .22s ease,visibility 0s .22s}
+.pantalla.activa{opacity:1;visibility:visible;transform:none;transition:opacity .22s ease,transform .22s ease}
+.pantalla.atras{transform:translateX(-24px)}
+.cuerpo{flex:1;overflow-y:auto;padding:20px 16px 28px;-webkit-overflow-scrolling:touch}
+.cuerpo.con-barra{padding-bottom:20px}
+@media (prefers-reduced-motion:reduce){.pantalla,.pantalla.activa{transition:none}*{animation:none!important}}
+
+/* Barra superior con volver */
+.superior{display:flex;align-items:center;gap:12px;padding:12px 16px;background:var(--fondo);border-bottom:2px solid var(--linea)}
+.superior .titulo-pequeno{font-size:20px;font-weight:700}
+.btn-volver{display:flex;align-items:center;gap:8px;min-height:60px;padding:0 18px 0 12px;border-radius:16px;
+  background:var(--tarjeta);border:2px solid var(--primario);color:var(--primario);font-weight:700}
+
+/* Textos */
+h1.grande{font-size:34px;line-height:1.15;font-weight:800;letter-spacing:-.01em}
+h2{font-size:28px;line-height:1.2;font-weight:800}
+.sub{color:var(--suave);margin-top:8px}
+.paso{display:inline-block;font-size:18px;font-weight:700;color:var(--acento);margin-bottom:6px}
+
+/* Botones */
+.btn{display:flex;align-items:center;justify-content:center;gap:12px;width:100%;min-height:64px;padding:14px 22px;
+  border-radius:18px;font-size:22px;font-weight:800;text-align:center;
+  background:var(--primario);color:#fff;transition:transform .12s ease,background .12s}
+.btn:active{transform:scale(.98);background:var(--primario-oscuro)}
+.btn.calido{background:var(--acento);color:#fff}
+.btn.calido:active{background:#7C2E00}
+.btn.borde{background:var(--tarjeta);color:var(--primario);border:3px solid var(--primario)}
+.btn.peligro{background:var(--tarjeta);color:var(--err-texto);border:3px solid var(--err-texto)}
+.btn.enorme{min-height:96px;font-size:26px;border-radius:24px;box-shadow:0 10px 20px -10px rgba(154,58,0,.7)}
+.btn.discreto{min-height:60px;background:transparent;color:var(--suave);font-size:19px;font-weight:600;text-decoration:underline;text-underline-offset:4px}
+.pila{display:flex;flex-direction:column;gap:16px}
+
+/* Tarjetas */
+.tarjeta{background:var(--tarjeta);border-radius:var(--radio);padding:20px;border:2px solid var(--linea);
+  box-shadow:0 6px 16px -10px rgba(20,33,61,.25)}
+.tarjeta .rotulo{font-size:18px;font-weight:700;color:var(--suave);margin-bottom:10px}
+button.tarjeta{width:100%;text-align:left;display:block}
+button.tarjeta:active{transform:scale(.99)}
+.tarjeta h3{font-size:24px;line-height:1.25;font-weight:800}
+.tarjeta p{margin-top:6px}
+
+/* Estados: ícono + palabra + color */
+.estado{display:inline-flex;align-items:center;gap:8px;padding:6px 14px 6px 10px;border-radius:999px;font-weight:800;font-size:19px;margin-bottom:12px}
+.estado.reservada{background:var(--ok-fondo);color:var(--ok-texto);border:2px solid var(--ok-texto)}
+.estado.buscando{background:var(--ambar-fondo);color:var(--ambar-texto);border:2px solid var(--ambar-texto)}
+.estado.mas{background:var(--ok-fondo);color:var(--ok-texto);border:2px solid var(--ok-texto);border-radius:18px;align-items:flex-start;line-height:1.25;max-width:100%}
+.estado.mas svg{margin-top:2px}
+.etiqueta{display:inline-block;font-size:18px;font-weight:800;padding:4px 14px;border-radius:999px;margin-bottom:8px}
+.etiqueta.antes{background:#E6E9EE;color:var(--suave);border:2px solid var(--suave)}
+.etiqueta.ahora{background:var(--ok-fondo);color:var(--ok-texto);border:2px solid var(--ok-texto)}
+.bloque-cita{border-radius:20px;padding:14px 18px 18px;margin-top:16px;background:#fff}
+.bloque-cita.antes{border:2px dashed var(--suave);color:var(--suave)}
+.bloque-cita.antes .fecha{text-decoration:line-through;text-decoration-thickness:2px}
+.bloque-cita.ahora{border:3px solid var(--ok-texto);color:var(--texto)}
+.bloque-cita .fecha{font-size:26px;line-height:1.2;font-weight:800}
+.pregunta h2{font-size:26px}
+.tarjeta.t-reservada{border-color:var(--ok-texto);border-left-width:10px}
+.tarjeta.t-buscando{border-color:var(--ambar-texto);border-left-width:10px}
+.tarjeta.vacia{border-style:dashed;color:var(--suave)}
+.dato{display:flex;gap:12px;align-items:flex-start;margin-top:12px}
+.dato svg{margin-top:3px;color:var(--primario)}
+.dato b{display:block;font-size:18px;color:var(--suave);font-weight:600}
+.dato span{font-weight:700}
+.ir{display:flex;align-items:center;justify-content:space-between;margin-top:14px;font-weight:800;color:var(--primario);font-size:20px}
+
+/* Latido de búsqueda */
+.punto{width:14px;height:14px;border-radius:50%;background:var(--acento);position:relative;flex:none}
+.punto::after{content:"";position:absolute;inset:0;border-radius:50%;background:var(--acento);animation:latido 1.6s ease-out infinite}
+@keyframes latido{0%{transform:scale(1);opacity:.6}100%{transform:scale(3);opacity:0}}
+
+/* Entrar */
+.entrada{background:linear-gradient(180deg,var(--primario) 0,var(--primario) 190px,var(--fondo) 190px)}
+.bienvenida{padding:36px 20px 0;color:#fff}
+.marca{display:flex;align-items:center;gap:12px;font-size:30px;font-weight:800}
+.marca .logo{width:52px;height:52px;border-radius:16px;background:#fff;color:var(--primario);display:grid;place-items:center}
+.bienvenida p{margin-top:10px;font-size:20px}
+.formulario{margin:14px 16px 0}
+label{display:block;font-weight:800;margin:0 0 8px}
+.campo{width:100%;min-height:64px;font:inherit;font-size:22px;padding:12px 16px;border:3px solid var(--suave);border-radius:16px;background:#fff;color:var(--texto)}
+.campo:focus{outline:4px solid var(--acento);outline-offset:2px;border-color:var(--texto)}
+.fila-campo{margin-bottom:18px}
+.nota{display:flex;gap:10px;align-items:flex-start;background:var(--acento-claro);border-radius:16px;padding:14px 16px;margin-bottom:18px;font-weight:600}
+.nota svg{color:var(--acento);margin-top:2px}
+
+/* Opciones (servicios, franjas, días) */
+.opciones{display:flex;flex-direction:column;gap:14px;margin-top:18px}
+.op{display:flex;align-items:center;gap:14px;width:100%;min-height:68px;padding:12px 16px;border-radius:18px;
+  background:var(--tarjeta);border:3px solid var(--linea);text-align:left;font-weight:700;font-size:21px;
+  transition:border-color .15s,background .15s}
+.op .icono{width:44px;height:44px;border-radius:14px;background:#E3EEF0;color:var(--primario);display:grid;place-items:center;flex:none}
+.op .marca-sel{margin-left:auto;display:none;align-items:center;gap:6px;font-size:18px;font-weight:800;color:var(--primario)}
+.op[aria-checked="true"],.op[aria-pressed="true"]{border-color:var(--primario);background:#E3EEF0}
+.op[aria-checked="true"] .marca-sel,.op[aria-pressed="true"] .marca-sel{display:flex}
+.op small{display:block;font-weight:500;font-size:18px;color:var(--suave)}
+.rejilla{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:14px}
+.rejilla .op{font-size:20px;padding:10px 12px;gap:8px}
+.rejilla .op .marca-sel{font-size:20px}
+.bloque{margin-top:26px}
+.bloque>h2{font-size:24px}
+
+/* Buscando */
+.heroe{border-radius:28px;padding:26px 22px;background:var(--ambar-fondo);border:3px solid var(--ambar-texto);color:var(--ambar-texto)}
+.heroe h1{font-size:32px;line-height:1.15;font-weight:800;color:var(--texto)}
+.heroe.ok{background:var(--ok-fondo);border-color:var(--ok-texto);color:var(--ok-texto)}
+.radar{display:flex;align-items:center;gap:12px;margin-top:16px;font-weight:800;color:var(--ambar-texto)}
+.garantias{list-style:none;margin-top:22px;display:flex;flex-direction:column;gap:14px}
+.garantias li{display:flex;gap:12px;align-items:flex-start;font-weight:600}
+.garantias svg{color:var(--primario);margin-top:2px}
+.cita-grande{margin-top:18px;background:#fff;border-radius:20px;padding:6px 18px 18px;border:2px solid var(--ok-texto);color:var(--texto)}
+.cita-grande .fecha{font-size:30px;line-height:1.2;font-weight:800;margin-top:14px}
+
+/* Barra inferior */
+.barra{display:flex;gap:8px;padding:10px 12px calc(10px + env(safe-area-inset-bottom));background:#fff;border-top:2px solid var(--linea)}
+.barra button{flex:1;min-height:68px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;
+  border-radius:16px;font-size:18px;font-weight:700;color:var(--suave);border:3px solid transparent}
+.barra button[aria-current="page"]{background:#E3EEF0;color:var(--primario);border-color:var(--primario);font-weight:800}
+
+/* Error */
+.error-icono{width:96px;height:96px;border-radius:50%;background:var(--ambar-fondo);color:var(--ambar-texto);display:grid;place-items:center;margin:20px auto 18px;border:3px solid var(--ambar-texto)}
+.centro{text-align:center}
+
+.aviso-lista{margin-top:14px;padding-left:0;list-style:none;display:flex;flex-direction:column;gap:12px}
+.pie{margin-top:22px}
+.oculto{display:none!important}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
+</style>
+</head>
+<body>
+<div class="escenario">
+  <header class="cabecera">
+    <h1>Propuesta 2 · «Tablero»</h1>
+    <p>Al abrir la app, usted ve de un vistazo cómo va todo: su próxima cita, su búsqueda en curso y un botón grande para pedir otra. Maqueta con datos de mentira.</p>
+  </header>
+
+  <div class="marco">
+  <div class="app" id="app">
+
+    <!-- 1. ENTRAR -->
+    <section class="pantalla entrada" id="entrar" aria-label="Entrar">
+      <div class="cuerpo">
+        <div class="bienvenida">
+          <div class="marca">
+            <span class="logo" aria-hidden="true"><svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="16" rx="3"/><path d="M8 3v4M16 3v4M3 10h18M9 15l2 2 4-4"/></svg></span>
+            Mi Cita
+          </div>
+          <p>Le ayudamos a conseguir su cita médica.</p>
+        </div>
+        <form class="formulario tarjeta" id="form-entrar" novalidate style="margin-top:28px">
+          <div class="nota"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 8h.01"/></svg><span>Use el mismo documento y clave de su EPS.</span></div>
+          <div class="fila-campo">
+            <label for="tipo-doc">Tipo de documento</label>
+            <select class="campo" id="tipo-doc">
+              <option>Cédula de ciudadanía</option><option>Tarjeta de identidad</option><option>Cédula de extranjería</option><option>Pasaporte</option>
+            </select>
+          </div>
+          <div class="fila-campo">
+            <label for="num-doc">Número de documento</label>
+            <input class="campo" id="num-doc" inputmode="numeric" autocomplete="off" placeholder="Por ejemplo: 41234567">
+          </div>
+          <div class="fila-campo">
+            <label for="clave">Clave</label>
+            <input class="campo" id="clave" type="password" autocomplete="off" placeholder="Su clave">
+          </div>
+          <button class="btn calido" type="submit">Entrar
+            <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg></button>
+        </form>
+      </div>
+    </section>
+
+    <!-- 2. INICIO / TABLERO -->
+    <section class="pantalla" id="inicio" aria-label="Inicio">
+      <div class="cuerpo con-barra">
+        <h1 class="grande" id="saludo">Buenos días, doña Marta</h1>
+        <p class="sub">Así va todo hoy.</p>
+
+        <div class="pila" style="margin-top:22px">
+          <div id="tab-cita"></div>
+          <div id="tab-busquedas" class="pila"></div>
+          <button class="btn calido enorme" data-ir="tipo">
+            <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
+            Pedir una cita nueva</button>
+        </div>
+      </div>
+      <nav class="barra" aria-label="Menú principal"></nav>
+    </section>
+
+    <!-- 3. QUÉ CITA NECESITA -->
+    <section class="pantalla" id="tipo" aria-label="Qué cita necesita">
+      <div class="superior"><button class="btn-volver" data-ir="inicio"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 5l-7 7 7 7"/></svg>Volver</button><span class="titulo-pequeno">Cita nueva</span></div>
+      <div class="cuerpo">
+        <span class="paso">Paso 1 de 2</span>
+        <h1 class="grande">¿Qué cita necesita?</h1>
+        <p class="sub">Toque una opción.</p>
+        <div class="opciones" role="radiogroup" aria-label="Tipo de cita" id="lista-servicios"></div>
+        <div class="pie"><button class="btn" id="a-cuando" disabled style="opacity:.45">Seguir
+          <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg></button></div>
+      </div>
+    </section>
+
+    <!-- 4. CUÁNDO LE SIRVE -->
+    <section class="pantalla" id="cuando" aria-label="Cuándo le sirve">
+      <div class="superior"><button class="btn-volver" data-ir="tipo" data-atras="1"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 5l-7 7 7 7"/></svg>Volver</button><span class="titulo-pequeno">Cita nueva</span></div>
+      <div class="cuerpo">
+        <span class="paso">Paso 2 de 2</span>
+        <h1 class="grande">¿Cuándo le sirve?</h1>
+        <p class="sub" id="cuando-sub">Cita de odontología</p>
+
+        <div class="bloque"><h2>¿A qué hora?</h2>
+          <div class="opciones" role="radiogroup" aria-label="Hora" id="lista-franja" style="margin-top:12px"></div></div>
+
+        <div class="bloque"><h2>¿Para cuándo la necesita?</h2>
+          <p class="sub">Toque una opción.</p>
+          <div class="opciones" role="radiogroup" aria-label="Para cuándo la necesita" id="lista-rango" style="margin-top:12px"></div>
+          <div class="tarjeta oculto" id="rango-propio" style="margin-top:14px">
+            <div class="fila-campo"><label for="f-desde">Desde</label><input class="campo" type="date" id="f-desde"></div>
+            <div class="fila-campo" style="margin-bottom:0"><label for="f-hasta">Hasta</label><input class="campo" type="date" id="f-hasta"></div>
+            <p id="rango-error" role="alert" class="oculto" style="margin-top:12px;font-weight:700;color:var(--err-texto)"></p>
+          </div></div>
+
+        <div class="bloque"><h2>¿Qué días puede?</h2>
+          <p class="sub">Toque los días que le sirven.</p>
+          <div class="rejilla" id="lista-dias"></div></div>
+
+        <div class="pie"><button class="btn calido" id="empezar">
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M20 20l-4-4"/></svg>
+          Buscar mi cita</button></div>
+      </div>
+    </section>
+
+    <!-- 5. BUSCANDO -->
+    <section class="pantalla" id="buscando" aria-label="Buscando su cita">
+      <div class="superior"><button class="btn-volver" data-ir="inicio"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 5l-7 7 7 7"/></svg>Inicio</button><span class="titulo-pequeno">Su búsqueda</span></div>
+      <div class="cuerpo">
+        <div class="heroe">
+          <span class="estado buscando"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M20 20l-4-4"/></svg>Buscando</span>
+          <h1 id="b-titulo">Estamos buscando su cita</h1>
+          <p id="b-detalle" style="margin-top:10px;font-weight:600"></p>
+          <div class="radar" role="status"><span class="punto" aria-hidden="true"></span><span id="b-vivo">Revisando ahora mismo</span></div>
+        </div>
+        <ul class="garantias">
+          <li><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6L9 17l-5-5"/></svg>Puede cerrar la aplicación. Nosotros seguimos buscando.</li>
+          <li><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6L9 17l-5-5"/></svg>Cuando aparezca la cita, la reservamos por usted.</li>
+          <li><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6L9 17l-5-5"/></svg>Le avisaremos con un mensaje en el celular.</li>
+        </ul>
+        <div class="pila pie">
+          <button class="btn borde" data-ir="inicio">Volver al inicio</button>
+          <button class="btn peligro" id="detener">
+            <svg width="26" height="26" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><rect x="6" y="6" width="12" height="12" rx="2"/></svg>Detener la búsqueda</button>
+          <button class="btn discreto" id="simular">Simular: apareció una cita</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- 6. CITA RESERVADA -->
+    <section class="pantalla" id="reservada" aria-label="Cita reservada">
+      <div class="superior"><button class="btn-volver" data-ir="inicio"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 5l-7 7 7 7"/></svg>Inicio</button><span class="titulo-pequeno">Buenas noticias</span></div>
+      <div class="cuerpo">
+        <div class="heroe ok">
+          <span class="estado reservada"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6L9 17l-5-5"/></svg>Reservada</span>
+          <h1 style="color:var(--texto)">¡Conseguimos su cita!</h1>
+          <div class="cita-grande" id="r-datos"></div>
+        </div>
+        <p class="sub" style="font-weight:600">Llegue 15 minutos antes y lleve su documento.</p>
+        <div class="tarjeta pregunta" id="pregunta-r" style="margin-top:20px"></div>
+      </div>
+    </section>
+
+    <!-- 6b. LE CONSEGUÍ UNA MÁS CERCANA -->
+    <section class="pantalla" id="cercana" aria-label="Cita más cercana">
+      <div class="superior"><button class="btn-volver" data-ir="inicio"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 5l-7 7 7 7"/></svg>Inicio</button><span class="titulo-pequeno">Buenas noticias</span></div>
+      <div class="cuerpo">
+        <div class="heroe ok">
+          <span class="estado reservada"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6L9 17l-5-5"/></svg>Cita cambiada</span>
+          <h1 style="color:var(--texto)">Le conseguí una cita más cercana</h1>
+          <div id="c-comparar"></div>
+        </div>
+        <div class="tarjeta pregunta" id="pregunta-c" style="margin-top:20px"></div>
+      </div>
+    </section>
+
+    <!-- 7. MIS CITAS -->
+    <section class="pantalla" id="citas" aria-label="Mis citas">
+      <div class="cuerpo con-barra">
+        <h1 class="grande">Mis citas</h1>
+        <h2 style="margin-top:24px;font-size:24px">Citas reservadas</h2>
+        <div class="pila" id="c-reservadas" style="margin-top:12px"></div>
+        <h2 style="margin-top:28px;font-size:24px">Búsquedas en curso</h2>
+        <div class="pila" id="c-busquedas" style="margin-top:12px"></div>
+      </div>
+      <nav class="barra" aria-label="Menú principal"></nav>
+    </section>
+
+    <!-- 8. AYUDA -->
+    <section class="pantalla" id="ayuda" aria-label="Ayuda">
+      <div class="cuerpo con-barra">
+        <h1 class="grande">Ayuda</h1>
+        <p class="sub">Estamos para acompañarla.</p>
+        <div class="pila" style="margin-top:20px">
+          <div class="tarjeta"><h3>¿Cómo funciona?</h3>
+            <ul class="aviso-lista">
+              <li><b>1.</b> Usted nos dice qué cita necesita.</li>
+              <li><b>2.</b> Nos dice cuándo le sirve.</li>
+              <li><b>3.</b> Nosotros buscamos y reservamos. Le avisamos.</li>
+            </ul></div>
+          <div class="tarjeta"><h3>¿Necesita hablar con alguien?</h3>
+            <p>Llame a nuestra línea de ayuda. Es una línea de mentira para esta maqueta.</p>
+            <button class="btn borde" style="margin-top:16px" data-ir="inicio">
+              <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 4h4l2 5-2.5 1.5a11 11 0 0 0 5 5L15 13l5 2v4a2 2 0 0 1-2 2A16 16 0 0 1 3 6a2 2 0 0 1 2-2z"/></svg>Llamar a la ayuda</button></div>
+          <div class="tarjeta"><h3>¿Quiere ver un aviso de ejemplo?</h3>
+            <p>Así le avisaremos si algo falla.</p>
+            <button class="btn borde" style="margin-top:16px" data-ir="error">Ver el aviso de ejemplo</button></div>
+          <button class="btn discreto" data-ir="entrar">Salir de la aplicación</button>
+        </div>
+      </div>
+      <nav class="barra" aria-label="Menú principal"></nav>
+    </section>
+
+    <!-- 9. ERROR AMABLE -->
+    <section class="pantalla" id="error" aria-label="Aviso">
+      <div class="superior"><button class="btn-volver" data-ir="ayuda" data-atras="1"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 5l-7 7 7 7"/></svg>Volver</button><span class="titulo-pequeno">Aviso</span></div>
+      <div class="cuerpo centro">
+        <div class="error-icono"><svg width="52" height="52" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg></div>
+        <h1 class="grande">Se cerró la sesión</h1>
+        <p class="sub" style="font-size:22px">No se preocupe, no perdió nada. Su búsqueda sigue activa. Solo necesitamos que entre otra vez.</p>
+        <div class="pila pie">
+          <button class="btn calido" data-ir="entrar">Entrar de nuevo</button>
+          <button class="btn borde" data-ir="ayuda" data-atras="1">Ahora no</button>
+        </div>
+      </div>
+    </section>
+
+  </div>
+  </div>
+</div>
+
+<script>
+(function(){
+  "use strict";
+  /* ---------- Datos de mentira ---------- */
+  var SERVICIOS = [
+    {id:"Medicina general", art:"medicina general", ico:'<path d="M12 21s-7-4.5-7-10a4 4 0 0 1 7-2.5A4 4 0 0 1 19 11c0 5.500-7 10-7 10z"/>'},
+    {id:"Odontología", art:"odontología", ico:'<path d="M7 4c-2 0-3 2-3 4 0 3 2 4 2 8 0 3 1 4 2 4s1-3 2-3 1 3 2 3 2-1 2-4c0-4 2-5 2-8 0-2-1-4-3-4-2 0-2 1-3 1S9 4 7 4z" transform="translate(1 0)"/>'},
+    {id:"Optometría", art:"optometría", ico:'<path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/>'},
+    {id:"Pediatría", art:"pediatría", ico:'<circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 4-6 8-6s8 2 8 6"/>'},
+    {id:"Otra especialidad", art:"otra especialidad", ico:'<path d="M12 5v14M5 12h14"/>'}
+  ];
+  var DETALLES = {
+    "Medicina general":{prof:"Dra. Lucía Herrera",sede:"Sede Centro · Calle 45 n.º 12-30",fecha:"Viernes 27 de noviembre",hora:"9:40 a. m."},
+    "Odontología":{prof:"Dr. Andrés Mejía",sede:"Sede Norte · Carrera 30 n.º 80-15",fecha:"Lunes 30 de noviembre",hora:"2:20 p. m."},
+    "Optometría":{prof:"Dra. Sofía Duarte",sede:"Sede Centro · Calle 45 n.º 12-30",fecha:"Martes 1 de diciembre",hora:"10:00 a. m."},
+    "Pediatría":{prof:"Dr. Camilo Rojas",sede:"Sede Sur · Avenida 68 n.º 5-20",fecha:"Miércoles 2 de diciembre",hora:"8:30 a. m."},
+    "Otra especialidad":{prof:"Dra. Marcela Ortega",sede:"Sede Centro · Calle 45 n.º 12-30",fecha:"Jueves 3 de diciembre",hora:"11:10 a. m."}
+  };
+  var FRANJAS = [["Mañana","Antes del mediodía"],["Tarde","Después del mediodía"],["Cualquier hora","Lo que aparezca primero"]];
+  var DIAS = ["Lunes","Martes","Miércoles","Jueves","Viernes","Sábado"];
+  var MESES = ["enero","febrero","marzo","abril","mayo","junio","julio","agosto","septiembre","octubre","noviembre","diciembre"];
+  /* Citas más cercanas de mentira (la 2.ª es todavía más cercana que la 1.ª) */
+  var CERCANAS = {
+    "Medicina general":[{fecha:"Miércoles 25 de noviembre",hora:"4:10 p. m."},{fecha:"Miércoles 25 de noviembre",hora:"8:00 a. m."}],
+    "Odontología":[{fecha:"Jueves 26 de noviembre",hora:"3:30 p. m."},{fecha:"Miércoles 25 de noviembre",hora:"11:00 a. m."}],
+    "Optometría":[{fecha:"Viernes 27 de noviembre",hora:"11:30 a. m."},{fecha:"Jueves 26 de noviembre",hora:"9:15 a. m."}],
+    "Pediatría":[{fecha:"Jueves 26 de noviembre",hora:"9:00 a. m."},{fecha:"Miércoles 25 de noviembre",hora:"2:40 p. m."}],
+    "Otra especialidad":[{fecha:"Viernes 27 de noviembre",hora:"2:00 p. m."},{fecha:"Jueves 26 de noviembre",hora:"10:30 a. m."}]
+  };
+
+  /* ---------- Rangos de fechas ---------- */
+  function hoy0(){var d=new Date();return new Date(d.getFullYear(),d.getMonth(),d.getDate());}
+  function sumar(d,n){return new Date(d.getFullYear(),d.getMonth(),d.getDate()+n);}
+  function fmt(d){return d.getDate()+" de "+MESES[d.getMonth()];}
+  function iso(d){return d.getFullYear()+"-"+("0"+(d.getMonth()+1)).slice(-2)+"-"+("0"+d.getDate()).slice(-2);}
+  function deIso(s){var p=String(s).split("-");return p.length===3&&p[0]?new Date(+p[0],+p[1]-1,+p[2]):null;}
+  var RANGOS = [
+    {txt:"Lo antes posible (próximos 7 días)"},
+    {txt:"En los próximos 15 días"},
+    {txt:"Este mes"},
+    {txt:"Elegir fechas",libre:true}
+  ];
+  function rangoPreset(i){
+    var h=hoy0(),d=sumar(h,1);
+    if(i===0)return {d:d,h:sumar(h,7)};
+    if(i===1)return {d:d,h:sumar(h,15)};
+    var fin=new Date(h.getFullYear(),h.getMonth()+1,0);
+    return fin<d?{d:h,h:fin}:{d:d,h:fin};
+  }
+  function textoRango(r){return "entre el "+fmt(r.d)+" y el "+fmt(r.h);}
+  function lcPrimera(s){return s.charAt(0).toLowerCase()+s.slice(1);}
+
+  var citas = [
+    {servicio:"Medicina general",fecha:"Jueves 26 de noviembre",hora:"10:20 a. m.",sede:"Sede Centro · Calle 45 n.º 12-30",prof:"Dra. Lucía Herrera"},
+    {servicio:"Optometría",fecha:"Lunes 14 de diciembre",hora:"3:00 p. m.",sede:"Sede Norte · Carrera 30 n.º 80-15",prof:"Dra. Sofía Duarte"}
+  ];
+  var busquedas = [{servicio:"Odontología",inicio:Date.now()-2*3600*1000,franja:"Mañana",rango:rangoPreset(1)}];
+  var actual = null;      // búsqueda que se ve en pantalla "Buscando"
+  var citaPreg = null;    // cita sobre la que se hace la pregunta «¿siga buscando?»
+  var nuevo = {servicio:null,franja:0,rango:0,desdeF:"",hastaF:"",dias:{}};
+  var ultima = "inicio";
+
+  /* ---------- Utilidades ---------- */
+  function $(s,r){return (r||document).querySelector(s)}
+  function $$(s,r){return Array.prototype.slice.call((r||document).querySelectorAll(s))}
+  var CHEQUE = '<span class="marca-sel"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6L9 17l-5-5"/></svg>Elegido</span>';
+  var ICO = {
+    reloj:'<svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>',
+    lugar:'<svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 21s7-6 7-11a7 7 0 0 0-14 0c0 5 7 11 7 11z"/><circle cx="12" cy="10" r="2.5"/></svg>',
+    persona:'<svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 4-6 8-6s8 2 8 6"/></svg>',
+    cheque:'<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6L9 17l-5-5"/></svg>',
+    lupa:'<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M20 20l-4-4"/></svg>',
+    flecha:'<svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 5l7 7-7 7"/></svg>'
+  };
+  function artDe(s){for(var i=0;i<SERVICIOS.length;i++)if(SERVICIOS[i].id===s)return SERVICIOS[i].art;return s.toLowerCase()}
+  function tiempo(b){
+    var m=Math.floor((Date.now()-b.inicio)/60000);
+    if(m<1)return "hace un momento";
+    if(m<60)return "hace "+m+(m===1?" minuto":" minutos");
+    var h=Math.floor(m/60);return "hace "+h+(h===1?" hora":" horas");
+  }
+  function datoCita(c){
+    return '<div class="dato">'+ICO.reloj+'<div><b>Día y hora</b><span>'+c.fecha+', '+c.hora+'</span></div></div>'+
+           '<div class="dato">'+ICO.lugar+'<div><b>Dónde</b><span>'+c.sede+'</span></div></div>'+
+           '<div class="dato">'+ICO.persona+'<div><b>Con quién</b><span>'+c.prof+'</span></div></div>';
+  }
+
+  /* ---------- Navegación ---------- */
+  var barra = [
+    {id:"inicio",txt:"Inicio",ico:'<path d="M3 11l9-8 9 8v9a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z"/>'},
+    {id:"citas",txt:"Mis citas",ico:'<rect x="3" y="5" width="18" height="16" rx="3"/><path d="M8 3v4M16 3v4M3 10h18"/>'},
+    {id:"ayuda",txt:"Ayuda",ico:'<circle cx="12" cy="12" r="9"/><path d="M9.500 9.500a2.500 2.500 0 1 1 3.500 2.300c-.7.400-1 .9-1 1.700M12 17h.01"/>'}
+  ];
+  function pintarBarras(){
+    $$(".barra").forEach(function(nav){
+      var pant = nav.parentNode.id;
+      nav.innerHTML = barra.map(function(b){
+        return '<button data-ir="'+b.id+'"'+(b.id===pant?' aria-current="page"':'')+'><svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">'+b.ico+'</svg>'+b.txt+'</button>';
+      }).join("");
+    });
+  }
+  function ir(id,atras){
+    var actualEl=$(".pantalla.activa"), dest=document.getElementById(id);
+    if(!dest||actualEl===dest)return;
+    if(actualEl){actualEl.classList.remove("activa");actualEl.classList.toggle("atras",!atras);}
+    dest.classList.remove("atras");
+    if(atras){dest.style.transform="translateX(-24px)";}
+    void dest.offsetWidth;
+    dest.style.transform="";
+    dest.classList.add("activa");
+    var cu=$(".cuerpo",dest); if(cu)cu.scrollTop=0;
+    ultima=id;
+    if(id==="inicio")pintarInicio();
+    if(id==="citas")pintarCitas();
+    if(id==="tipo")pintarServicios();
+    if(id==="cuando")pintarCuando();
+    if(id==="buscando")pintarBuscando();
+    var h=$("h1",dest); if(h){h.setAttribute("tabindex","-1");}
+  }
+  document.addEventListener("click",function(e){
+    var b=e.target.closest("[data-ir]");
+    if(b){ir(b.getAttribute("data-ir"),b.hasAttribute("data-atras")||/^(tipo|cuando)$/.test(b.getAttribute("data-ir"))&&b.classList.contains("btn-volver"));}
+  });
+
+  /* ---------- Entrar ---------- */
+  $("#form-entrar").addEventListener("submit",function(e){e.preventDefault();ir("inicio");});
+
+  /* ---------- Inicio (tablero) ---------- */
+  function saludo(){
+    var h=new Date().getHours();
+    return (h<12?"Buenos días":h<19?"Buenas tardes":"Buenas noches")+", doña Marta";
+  }
+  /* Tarjeta de cita reservada que sigue buscando una más cercana */
+  function tarjetaMas(c,i){
+    return '<div class="tarjeta t-reservada"><span class="estado mas">'+ICO.lupa+'Reservada · buscando una más cercana</span>'+
+      '<h3>'+c.servicio+'</h3><p style="font-weight:800">'+c.fecha+', '+c.hora+'</p><p>'+c.sede.split(" · ")[0]+'</p>'+
+      '<div class="pila" style="margin-top:16px"><button class="btn peligro" data-dejar="'+i+'"><svg width="26" height="26" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><rect x="6" y="6" width="12" height="12" rx="2"/></svg>Dejar de buscar</button>'+
+      (c.nivel<2?'<button class="btn discreto" data-simcerca="'+i+'">Simular: apareció una más cercana</button>':'<p style="font-weight:600;color:var(--suave)">Esta es la cita más cercana que hay.</p>')+'</div></div>';
+  }
+  function repintar(){
+    if(ultima==="inicio")pintarInicio();
+    if(ultima==="citas")pintarCitas();
+  }
+  document.addEventListener("click",function(e){
+    var b;
+    if((b=e.target.closest("[data-dejar]"))){citas[+b.getAttribute("data-dejar")].mas=false;repintar();}
+    else if((b=e.target.closest("[data-simcerca]"))){
+      var c=citas[+b.getAttribute("data-simcerca")];
+      c.nivel=c.nivel||0;
+      var s=(CERCANAS[c.servicio]||CERCANAS["Medicina general"])[Math.min(c.nivel,1)];
+      c.antes={fecha:c.fecha,hora:c.hora};
+      c.fecha=s.fecha;c.hora=s.hora;c.nivel++;
+      pintarCercana(c);ir("cercana");
+    }
+  });
+
+  /* ---------- Pregunta «¿siga buscando una más cercana?» ---------- */
+  function pintarPregunta(el,c){
+    el.innerHTML='<h2>¿Quiere que siga buscando una cita más cercana?</h2>'+
+      '<p>Su cita del '+lcPrimera(c.fecha)+' queda guardada. Si aparece una antes, se la cambio y le aviso.</p>'+
+      '<div class="pila" style="margin-top:18px"><button class="btn calido" data-resp="si">'+ICO.lupa+'Sí, siga buscando</button>'+
+      '<button class="btn borde" data-resp="no">'+ICO.cheque+'No, esta me sirve</button></div>';
+  }
+  function pintarCercana(c){
+    citaPreg=c;
+    $("#c-comparar").innerHTML=
+      '<div class="bloque-cita antes"><span class="etiqueta antes">Antes</span><div class="fecha">'+c.antes.fecha+'<br>'+c.antes.hora+'</div></div>'+
+      '<div class="bloque-cita ahora"><span class="etiqueta ahora">Ahora</span><div class="fecha">'+c.fecha+'<br>'+c.hora+'</div>'+
+      '<div style="font-weight:800;margin-top:6px;font-size:22px">'+c.servicio+'</div>'+
+      datoCita(c).replace(/<div class="dato">/,'<div class="dato" style="margin-top:14px">')+'</div>';
+    if(c.nivel>=2){
+      $("#pregunta-c").innerHTML='<h2>Esta es la cita más cercana que hay</h2><p>Su cita del '+lcPrimera(c.fecha)+' queda guardada.</p><div class="pila" style="margin-top:18px"><button class="btn" data-resp="no">Volver al inicio</button></div>';
+    } else pintarPregunta($("#pregunta-c"),c);
+  }
+  document.addEventListener("click",function(e){
+    var b=e.target.closest("[data-resp]");if(!b||!citaPreg)return;
+    citaPreg.mas=b.getAttribute("data-resp")==="si"&&citaPreg.nivel<2;
+    citaPreg=null;ir("inicio");
+  });
+
+  function pintarInicio(){
+    $("#saludo").textContent=saludo();
+    var c=citas[0],html="";
+    if(c){
+      html = c.mas
+        ? tarjetaMas(c,0)
+        : '<button class="tarjeta t-reservada" data-ir="citas"><span class="estado reservada">'+ICO.cheque+'Reservada</span><div class="rotulo" style="margin-bottom:4px">Su próxima cita</div><h3>'+c.servicio+'</h3><p style="font-weight:700">'+c.fecha+', '+c.hora+'</p><p>'+c.sede.split(" · ")[0]+'</p><div class="ir">Ver mis citas'+ICO.flecha+'</div></button>';
+    } else html='<div class="tarjeta vacia"><h3>No tiene citas reservadas</h3></div>';
+    citas.forEach(function(x,i){if(i>0&&x.mas)html+=tarjetaMas(x,i);});
+    $("#tab-cita").className="pila";
+    $("#tab-cita").innerHTML=html;
+    $("#tab-busquedas").innerHTML = busquedas.length
+      ? busquedas.map(function(b,i){
+          return '<button class="tarjeta t-buscando" data-busqueda="'+i+'"><span class="estado buscando">'+ICO.lupa+'Buscando</span><h3>Buscando '+artDe(b.servicio)+' '+tiempo(b)+'</h3>'+(b.rango?'<p style="font-weight:700">'+textoRango(b.rango).replace(/^e/,"E")+'</p>':'')+'<div class="radar" style="margin-top:10px"><span class="punto" aria-hidden="true"></span>Revisando ahora mismo</div><div class="ir">Ver la búsqueda'+ICO.flecha+'</div></button>';
+        }).join("")
+      : '<div class="tarjeta vacia"><h3>No hay búsquedas en curso</h3><p>Toque el botón de abajo cuando necesite una cita.</p></div>';
+  }
+  document.addEventListener("click",function(e){
+    var b=e.target.closest("[data-busqueda]");
+    if(b){actual=busquedas[+b.getAttribute("data-busqueda")];ir("buscando");}
+  });
+
+  /* ---------- Paso 1: qué cita ---------- */
+  function pintarServicios(){
+    $("#lista-servicios").innerHTML=SERVICIOS.map(function(s){
+      var sel=nuevo.servicio===s.id;
+      return '<button class="op" role="radio" aria-checked="'+sel+'" data-serv="'+s.id+'"><span class="icono"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">'+s.ico+'</svg></span>'+s.id+CHEQUE+'</button>';
+    }).join("");
+    var sig=$("#a-cuando");sig.disabled=!nuevo.servicio;sig.style.opacity=nuevo.servicio?1:.45;
+  }
+  $("#lista-servicios").addEventListener("click",function(e){
+    var b=e.target.closest("[data-serv]");if(!b)return;
+    nuevo.servicio=b.getAttribute("data-serv");pintarServicios();
+  });
+  $("#a-cuando").addEventListener("click",function(){if(nuevo.servicio)ir("cuando");});
+
+  /* ---------- Paso 2: cuándo ---------- */
+  function pintarCuando(){
+    $("#cuando-sub").textContent="Cita de "+artDe(nuevo.servicio||"Odontología");
+    $("#lista-franja").innerHTML=FRANJAS.map(function(f,i){
+      return '<button class="op" role="radio" aria-checked="'+(nuevo.franja===i)+'" data-franja="'+i+'"><span>'+f[0]+'<small>'+f[1]+'</small></span>'+CHEQUE+'</button>';
+    }).join("");
+    $("#lista-rango").innerHTML=RANGOS.map(function(r,i){
+      var sub=r.libre?"Usted escoge desde y hasta":"Del "+fmt(rangoPreset(i).d)+" al "+fmt(rangoPreset(i).h);
+      return '<button class="op" role="radio" aria-checked="'+(nuevo.rango===i)+'" data-rango="'+i+'"><span>'+r.txt+'<small>'+sub+'</small></span>'+CHEQUE+'</button>';
+    }).join("");
+    var libre=RANGOS[nuevo.rango].libre;
+    $("#rango-propio").classList.toggle("oculto",!libre);
+    var fd=$("#f-desde"),fh=$("#f-hasta");
+    fd.min=fh.min=iso(hoy0());
+    if(!nuevo.desdeF)nuevo.desdeF=iso(sumar(hoy0(),1));
+    if(!nuevo.hastaF)nuevo.hastaF=iso(sumar(hoy0(),15));
+    fd.value=nuevo.desdeF;fh.value=nuevo.hastaF;
+    $("#rango-error").classList.add("oculto");
+    $("#lista-dias").innerHTML=DIAS.map(function(d){
+      var on=!!nuevo.dias[d];
+      return '<button class="op" aria-pressed="'+on+'" data-dia="'+d+'"><span>'+d+'</span>'+CHEQUE.replace("Elegido","Sí")+'</button>';
+    }).join("")+'<button class="op" style="grid-column:1/-1;justify-content:center" data-dia="todos"><span>Todos los días</span></button>';
+  }
+  $("#cuando").addEventListener("click",function(e){
+    var b;
+    if((b=e.target.closest("[data-franja]"))){nuevo.franja=+b.getAttribute("data-franja");pintarCuando();}
+    else if((b=e.target.closest("[data-rango]"))){nuevo.rango=+b.getAttribute("data-rango");pintarCuando();}
+    else if((b=e.target.closest("[data-dia]"))){
+      var d=b.getAttribute("data-dia");
+      if(d==="todos"){var todos=DIAS.every(function(x){return nuevo.dias[x]});DIAS.forEach(function(x){nuevo.dias[x]=!todos});}
+      else nuevo.dias[d]=!nuevo.dias[d];
+      pintarCuando();
+    }
+  });
+  $("#f-desde").addEventListener("input",function(){nuevo.desdeF=this.value;});
+  $("#f-hasta").addEventListener("input",function(){nuevo.hastaF=this.value;});
+  $("#empezar").addEventListener("click",function(){
+    var s=nuevo.servicio||"Odontología",rango;
+    if(RANGOS[nuevo.rango].libre){
+      var d=deIso(nuevo.desdeF),h=deIso(nuevo.hastaF),er=$("#rango-error"),msg="";
+      if(!d||!h)msg="Elija el día «Desde» y el día «Hasta».";
+      else if(d<hoy0())msg="El día «Desde» no puede ser anterior a hoy.";
+      else if(h<d)msg="El día «Hasta» debe ser el mismo día «Desde» o uno después.";
+      if(msg){er.textContent=msg;er.classList.remove("oculto");er.scrollIntoView({block:"center"});return;}
+      rango={d:d,h:h};
+    } else rango=rangoPreset(nuevo.rango);
+    actual={servicio:s,inicio:Date.now(),franja:FRANJAS[nuevo.franja][0],rango:rango,
+      dias:DIAS.filter(function(d){return nuevo.dias[d]})};
+    busquedas.push(actual);
+    nuevo={servicio:null,franja:0,rango:0,desdeF:"",hastaF:"",dias:{}};
+    ir("buscando");
+  });
+
+  /* ---------- Buscando ---------- */
+  var reloj=null;
+  function pintarBuscando(){
+    if(!actual)actual=busquedas[0];
+    if(!actual){ir("inicio");return;}
+    $("#b-titulo").textContent="Estamos buscando su cita de "+artDe(actual.servicio);
+    var det="Busco "+(actual.rango?textoRango(actual.rango)+". ":"")+"Horario de "+String(actual.franja||"cualquier hora").toLowerCase()+".";
+    $("#b-detalle").textContent=det;
+    actualizarVivo();
+  }
+  var rev=0;
+  function actualizarVivo(){
+    var el=$("#b-vivo");if(!el||!actual)return;
+    rev=(rev+1)%7;
+    el.textContent="Revisando ahora mismo · lleva "+tiempo(actual).replace("hace ","");
+  }
+  setInterval(function(){
+    if(ultima==="buscando")actualizarVivo();
+    if(ultima==="inicio")pintarInicioSuave();
+  },5000);
+  function pintarInicioSuave(){/* mantiene al día el tiempo transcurrido */
+    $$("#tab-busquedas [data-busqueda] h3").forEach(function(h,i){
+      var b=busquedas[i];if(b)h.textContent="Buscando "+artDe(b.servicio)+" "+tiempo(b);
+    });
+  }
+  $("#detener").addEventListener("click",function(){
+    busquedas=busquedas.filter(function(b){return b!==actual});actual=null;ir("inicio");
+  });
+  $("#simular").addEventListener("click",function(){
+    if(!actual)return;
+    var d=DETALLES[actual.servicio]||DETALLES["Medicina general"];
+    var c={servicio:actual.servicio,fecha:d.fecha,hora:d.hora,sede:d.sede,prof:d.prof,mas:false,nivel:0};
+    citaPreg=c;pintarPregunta($("#pregunta-r"),c);
+    busquedas=busquedas.filter(function(b){return b!==actual});actual=null;
+    citas.push(c);
+    $("#r-datos").innerHTML='<div class="fecha">'+c.fecha+'<br>'+c.hora+'</div><div style="font-weight:800;margin-top:6px;font-size:22px">'+c.servicio+'</div>'+datoCita(c).replace(/<div class="dato">/,'<div class="dato" style="margin-top:14px">');
+    ir("reservada");
+  });
+
+  /* ---------- Mis citas ---------- */
+  function pintarCitas(){
+    $("#c-reservadas").innerHTML=citas.map(function(c,i){
+      return '<div class="tarjeta t-reservada">'+(c.mas?'<span class="estado mas">'+ICO.lupa+'Reservada · buscando una más cercana</span>':'<span class="estado reservada">'+ICO.cheque+'Reservada</span>')+'<h3>'+c.servicio+'</h3><p style="font-weight:800">'+c.fecha+', '+c.hora+'</p>'+
+        '<div class="dato">'+ICO.lugar+'<div><b>Dónde</b><span>'+c.sede+'</span></div></div>'+
+        '<div class="dato">'+ICO.persona+'<div><b>Con quién</b><span>'+c.prof+'</span></div></div>'+
+        (c.mas?'<div class="pila" style="margin-top:16px"><button class="btn peligro" data-dejar="'+i+'"><svg width="26" height="26" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><rect x="6" y="6" width="12" height="12" rx="2"/></svg>Dejar de buscar</button>'+(c.nivel<2?'<button class="btn discreto" data-simcerca="'+i+'">Simular: apareció una más cercana</button>':'')+'</div>':'')+'</div>';
+    }).join("")||'<div class="tarjeta vacia"><h3>Aún no tiene citas reservadas</h3></div>';
+    $("#c-busquedas").innerHTML=busquedas.map(function(b,i){
+      return '<button class="tarjeta t-buscando" data-busqueda="'+i+'"><span class="estado buscando">'+ICO.lupa+'Buscando</span><h3>'+b.servicio+'</h3>'+(b.rango?'<p style="font-weight:700">'+textoRango(b.rango).replace(/^e/,"E")+'</p>':'')+'<p>Buscando '+tiempo(b)+'</p><div class="ir">Ver la búsqueda'+ICO.flecha+'</div></button>';
+    }).join("")||'<div class="tarjeta vacia"><h3>No hay búsquedas en curso</h3></div>';
+  }
+
+  pintarBarras();
+  document.getElementById("entrar").classList.add("activa");
+})();
+</script>
+</body>
+</html>

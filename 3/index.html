@@ -1,0 +1,837 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Mi Cita · Propuesta 3: Conversación</title>
+<style>
+  :root{
+    --crema:#FBF5EC;
+    --crema-2:#F3E8D7;
+    --tinta:#231A14;
+    --tinta-suave:#54443A;
+    --borde:#DCC9AF;
+    --indigo:#2B3A67;
+    --indigo-oscuro:#1D2848;
+    --teja:#8F3010;
+    --teja-claro:#F6DDCF;
+    --teal:#0F5257;
+    --teal-claro:#DDEFEE;
+    --blanco:#FFFFFF;
+    --foco:#C2410C;
+    --radio:24px;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;height:100%}
+  body{
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+    font-size:20px; line-height:1.4; color:var(--tinta);
+    background:var(--crema);
+  }
+  button,select,input{font:inherit;color:inherit}
+  button{cursor:pointer}
+  :focus-visible{outline:4px solid var(--foco);outline-offset:3px}
+  [hidden]{display:none!important}
+
+  /* ===== Presentación en escritorio ===== */
+  .presentacion{display:none}
+  .marco{position:relative;width:100%;height:100dvh;background:var(--crema);overflow:hidden}
+  @media (min-width:640px){
+    body{background:#E9DDCB;display:flex;flex-direction:column;align-items:center;min-height:100vh;height:auto;padding:28px 16px 40px}
+    .presentacion{display:block;max-width:560px;text-align:center;margin-bottom:22px}
+    .presentacion .etiqueta{display:inline-block;font-size:14px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--teja);margin-bottom:6px}
+    .presentacion h1{margin:0 0 8px;font-size:30px;line-height:1.15}
+    .presentacion p{margin:0;font-size:17px;color:var(--tinta-suave)}
+    .marco{width:390px;height:800px;flex:none;border-radius:44px;border:10px solid #2A211B;box-shadow:0 30px 60px -20px rgba(35,26,20,.5)}
+  }
+
+  /* ===== Pantallas ===== */
+  .pantalla{position:absolute;inset:0;display:flex;flex-direction:column;background:var(--crema)}
+  .pantalla[hidden]{display:none}
+  .marca{display:flex;align-items:center;gap:10px;font-weight:800;font-size:22px;color:var(--indigo-oscuro)}
+  .marca svg{flex:none}
+
+  /* ===== Entrar ===== */
+  #p-entrar{overflow-y:auto;padding:28px 22px 28px}
+  #p-entrar h2{font-size:32px;line-height:1.15;margin:22px 0 8px}
+  #p-entrar .sub{margin:0 0 22px;color:var(--tinta-suave)}
+  label{display:block;font-weight:700;margin:16px 0 6px}
+  .campo{width:100%;min-height:62px;padding:12px 16px;border:3px solid var(--tinta-suave);border-radius:16px;background:var(--blanco);font-size:22px}
+  .fila-clave{display:flex;gap:10px}
+  .fila-clave .campo{flex:1;min-width:0}
+
+  /* ===== Botones ===== */
+  .btn{display:flex;align-items:center;justify-content:center;gap:10px;width:100%;min-height:62px;padding:12px 18px;border-radius:18px;border:3px solid var(--indigo);background:var(--blanco);color:var(--indigo-oscuro);font-weight:700;font-size:21px;line-height:1.2;text-align:center}
+  .btn:active{transform:scale(.985)}
+  .btn.primario{background:var(--indigo);color:#fff}
+  .btn.exito{background:var(--teal);border-color:var(--teal);color:#fff}
+  .btn.aviso{border-color:var(--teja);color:var(--teja)}
+  .btn.marcado{background:var(--indigo);color:#fff}
+  .btn.chico{width:auto;padding:12px 20px}
+  .btn.simular{min-height:52px;border:2px dashed var(--tinta-suave);color:var(--tinta-suave);background:transparent;font-size:17px;font-weight:600}
+  .btn:disabled{opacity:.55;cursor:not-allowed}
+
+  /* ===== Encabezado fijo ===== */
+  .cabecera{flex:none;padding:12px 14px 12px;background:var(--blanco);border-bottom:3px solid var(--borde)}
+  .cabecera .marca{margin:0 2px 10px;font-size:20px}
+  .cabecera .botones{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  .cabecera .btn{min-height:60px;padding:8px 8px;font-size:19px;border-radius:16px}
+
+  /* ===== Conversación ===== */
+  #hilo{flex:1;min-height:0;overflow-y:auto;padding:18px 14px 12px;display:flex;flex-direction:column;gap:14px;scroll-behavior:smooth;background:
+    radial-gradient(circle at 100% 0,rgba(246,221,207,.7),transparent 45%),var(--crema)}
+  #hilo > *{flex:none}
+  .fila{display:flex;gap:10px;align-items:flex-end;animation:entra .28s ease-out both}
+  .fila.yo{flex-direction:column;align-items:flex-end;gap:6px}
+  @keyframes entra{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+  .avatar{flex:none;width:44px;height:44px;border-radius:50%;background:var(--teja);display:grid;place-items:center}
+  .globo{max-width:calc(100% - 54px);padding:16px 18px;border-radius:26px;font-size:22px;line-height:1.38}
+  .globo.ellos{background:var(--blanco);border:2px solid var(--borde);border-bottom-left-radius:8px}
+  .globo.ellos b{color:var(--teja)}
+  .globo.yo{background:var(--indigo);color:#fff;border-bottom-right-radius:8px;font-weight:600;max-width:88%}
+  .cambiar{min-height:60px;padding:8px 20px;border-radius:30px;border:2px solid var(--indigo);background:var(--blanco);color:var(--indigo-oscuro);font-weight:700;font-size:19px}
+  .escribiendo{display:flex;gap:7px;padding:20px 22px}
+  .escribiendo i{width:11px;height:11px;border-radius:50%;background:var(--tinta-suave);animation:salta 1s infinite ease-in-out}
+  .escribiendo i:nth-child(2){animation-delay:.15s}
+  .escribiendo i:nth-child(3){animation-delay:.3s}
+  @keyframes salta{0%,80%,100%{transform:translateY(0);opacity:.4}40%{transform:translateY(-6px);opacity:1}}
+
+  /* tarjetas dentro del hilo */
+  .tarjeta{width:100%;background:var(--blanco);border:3px solid var(--indigo);border-radius:var(--radio);overflow:hidden;animation:entra .3s ease-out both}
+  .tarjeta .tope{padding:12px 18px;font-weight:800;font-size:21px;display:flex;align-items:center;gap:10px}
+  .tarjeta .cuerpo{padding:14px 18px 18px}
+  .tarjeta.buscando .tope{background:var(--crema-2);color:var(--tinta)}
+  .tarjeta.hecha{border-color:var(--teal)}
+  .tarjeta.hecha .tope{background:var(--teal);color:#fff;font-size:23px}
+  .tarjeta.detenida{border-color:var(--borde)}
+  .tarjeta.detenida .tope{background:var(--crema-2)}
+  .dato{display:flex;gap:12px;padding:9px 0;border-top:2px solid var(--crema-2)}
+  .dato:first-child{border-top:0}
+  .dato .ico{flex:none;width:30px;text-align:center;font-size:24px}
+  .dato small{display:block;font-size:16px;color:var(--tinta-suave);font-weight:600}
+  .dato strong{font-size:22px;line-height:1.25}
+  .radar{position:relative;flex:none;width:26px;height:26px}
+  .radar::before,.radar::after{content:"";position:absolute;inset:0;border-radius:50%;background:var(--teja)}
+  .radar::after{animation:onda 1.8s infinite ease-out;opacity:.5}
+  .radar::before{inset:6px}
+  @keyframes onda{from{transform:scale(.4);opacity:.6}to{transform:scale(1.5);opacity:0}}
+  .resumen{margin:6px 0 0;font-size:20px}
+
+  /* panel de respuestas */
+  #acciones{flex:none;max-height:56%;overflow-y:auto;padding:12px 14px calc(14px + env(safe-area-inset-bottom));background:var(--blanco);border-top:3px solid var(--borde);display:flex;flex-direction:column;gap:10px}
+  #acciones:empty{display:none}
+  #acciones .rotulo{margin:0 2px;font-size:18px;font-weight:700;color:var(--tinta-suave)}
+  .rejilla{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  .rejilla .ancho{grid-column:1/-1}
+
+  /* ===== Mis citas ===== */
+  #p-citas{overflow-y:auto}
+  #p-citas .contenido{padding:16px 14px 28px;display:flex;flex-direction:column;gap:14px}
+  #p-citas h2{font-size:30px;line-height:1.15;margin:8px 2px 0}
+  #p-citas h3{font-size:23px;margin:14px 2px 0}
+  .vacio{margin:0 2px;color:var(--tinta-suave)}
+  .item{background:var(--blanco);border:3px solid var(--borde);border-radius:var(--radio);padding:14px 16px;display:flex;flex-direction:column;gap:10px}
+  .item.nueva{border-color:var(--teal)}
+  .etiq{align-self:flex-start;font-size:17px;font-weight:800;padding:4px 12px;border-radius:20px}
+  .etiq.ok{background:var(--teal-claro);color:var(--teal)}
+  .etiq.busca{background:var(--teja-claro);color:var(--teja)}
+  .etiq.mejora{background:var(--teal-claro);color:var(--teal);border:2px solid var(--teal)}
+  .item .btn{margin-top:2px}
+
+  /* campos de fecha del rango */
+  #acciones label{margin:6px 2px 2px;font-size:20px}
+  #acciones .campo{min-height:64px}
+  .aviso-campo{margin:0 2px;font-size:19px;font-weight:700;color:var(--teja)}
+
+  /* tarjeta «más cercana»: antes y ahora */
+  .bloque{border-radius:18px;padding:10px 14px;margin-top:10px}
+  .bloque:first-child{margin-top:0}
+  .bloque.antes{background:var(--crema-2);border:2px dashed var(--tinta-suave)}
+  .bloque.ahora{background:var(--teal-claro);border:3px solid var(--teal)}
+  .sello{display:inline-block;font-size:17px;font-weight:800;padding:3px 12px;border-radius:20px;margin-bottom:2px}
+  .antes .sello{background:var(--tinta-suave);color:#fff}
+  .ahora .sello{background:var(--teal);color:#fff}
+  .bloque .dato{border-top-color:rgba(35,26,20,.15)}
+
+  .pie-citas{margin-top:18px;padding-top:16px;border-top:2px dashed var(--borde);display:flex;flex-direction:column;gap:8px}
+  .pie-citas p{margin:0;font-size:17px;color:var(--tinta-suave)}
+
+  /* ===== Error amable ===== */
+  #p-error{padding:30px 22px;justify-content:center;gap:14px;overflow-y:auto;background:var(--crema)}
+  #p-error .icono-grande{width:96px;height:96px;border-radius:50%;background:var(--teja-claro);display:grid;place-items:center;font-size:52px}
+  #p-error h2{font-size:32px;line-height:1.15;margin:6px 0 0}
+  #p-error p{margin:0}
+  #p-error .tranquilo{background:var(--blanco);border:3px solid var(--borde);border-radius:18px;padding:14px 16px}
+
+  @media (prefers-reduced-motion:reduce){
+    *{animation:none!important;scroll-behavior:auto!important;transition:none!important}
+  }
+</style>
+</head>
+<body>
+
+<header class="presentacion">
+  <span class="etiqueta">Propuesta 3 · Conversación</span>
+  <h1>Hablar con alguien que le ayuda</h1>
+  <p>La app es una charla: un asistente amable hace una pregunta a la vez y la persona solo toca botones grandes. Todo lo que ya dijo queda a la vista y se puede cambiar. Maqueta con datos de mentira.</p>
+</header>
+
+<main class="marco" id="marco">
+
+  <!-- 1. ENTRAR -->
+  <section class="pantalla" id="p-entrar" aria-label="Entrar">
+    <div class="marca">
+      <svg width="40" height="40" viewBox="0 0 40 40" aria-hidden="true"><rect width="40" height="40" rx="12" fill="#2B3A67"/><path d="M11 13h18a3 3 0 0 1 3 3v8a3 3 0 0 1-3 3H21l-6 5v-5h-4a3 3 0 0 1-3-3v-8a3 3 0 0 1 3-3z" fill="#fff"/><path d="M15 20l3.5 3.5L25 17" fill="none" stroke="#8F3010" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      Mi Cita
+    </div>
+    <h2>Bienvenida, bienvenido</h2>
+    <p class="sub">Use el mismo documento y clave de su EPS.</p>
+    <form id="form-entrar" autocomplete="off" novalidate>
+      <label for="tipo-doc">Tipo de documento</label>
+      <select class="campo" id="tipo-doc">
+        <option>Cédula de ciudadanía</option>
+        <option>Tarjeta de identidad</option>
+        <option>Cédula de extranjería</option>
+        <option>Pasaporte</option>
+      </select>
+      <label for="num-doc">Número de documento</label>
+      <input class="campo" id="num-doc" inputmode="numeric" placeholder="Ejemplo: 41 234 567">
+      <label for="clave">Clave</label>
+      <div class="fila-clave">
+        <input class="campo" id="clave" type="password" placeholder="Su clave">
+        <button type="button" class="btn chico" id="ver-clave" aria-pressed="false">Ver</button>
+      </div>
+      <div style="height:22px"></div>
+      <button type="submit" class="btn primario">Entrar</button>
+    </form>
+  </section>
+
+  <!-- 2. CONVERSACIÓN -->
+  <section class="pantalla" id="p-chat" aria-label="Conversación" hidden>
+    <div class="cabecera">
+      <div class="marca">
+        <svg width="30" height="30" viewBox="0 0 40 40" aria-hidden="true"><rect width="40" height="40" rx="12" fill="#2B3A67"/><path d="M11 13h18a3 3 0 0 1 3 3v8a3 3 0 0 1-3 3H21l-6 5v-5h-4a3 3 0 0 1-3-3v-8a3 3 0 0 1 3-3z" fill="#fff"/><path d="M15 20l3.5 3.5L25 17" fill="none" stroke="#8F3010" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        Mi Cita
+      </div>
+      <div class="botones">
+        <button class="btn" id="b-mis-citas">📅 Mis citas</button>
+        <button class="btn aviso" id="b-reiniciar">↺ Empezar de nuevo</button>
+      </div>
+    </div>
+    <div id="hilo" role="log" aria-live="polite" aria-label="Conversación con su ayudante"></div>
+    <div id="acciones"></div>
+  </section>
+
+  <!-- 3. MIS CITAS -->
+  <section class="pantalla" id="p-citas" aria-label="Mis citas" hidden>
+    <div class="cabecera">
+      <div class="marca">
+        <svg width="30" height="30" viewBox="0 0 40 40" aria-hidden="true"><rect width="40" height="40" rx="12" fill="#2B3A67"/><path d="M11 13h18a3 3 0 0 1 3 3v8a3 3 0 0 1-3 3H21l-6 5v-5h-4a3 3 0 0 1-3-3v-8a3 3 0 0 1 3-3z" fill="#fff"/><path d="M15 20l3.5 3.5L25 17" fill="none" stroke="#8F3010" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        Mi Cita
+      </div>
+      <div class="botones">
+        <button class="btn" id="b-volver-chat">← Volver a la charla</button>
+        <button class="btn aviso" id="b-reiniciar-2">↺ Empezar de nuevo</button>
+      </div>
+    </div>
+    <div class="contenido">
+      <h2>Mis citas</h2>
+      <h3>Citas reservadas</h3>
+      <div id="lista-citas"></div>
+      <h3>Búsquedas activas</h3>
+      <div id="lista-busquedas"></div>
+      <div class="pie-citas">
+        <p>Solo para la maqueta:</p>
+        <button class="btn simular" id="b-ver-error">Simular: se cerró la sesión</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- 4. ERROR AMABLE -->
+  <section class="pantalla" id="p-error" aria-label="Aviso" hidden>
+    <div class="icono-grande" aria-hidden="true">🔑</div>
+    <h2>Se cerró la sesión</h2>
+    <p>Por su seguridad, la sesión se cerró sola. Entre de nuevo y seguimos.</p>
+    <p class="tranquilo"><b>Tranquila, tranquilo:</b> sus citas y su búsqueda siguen guardadas. No se perdió nada.</p>
+    <button class="btn primario" id="b-reentrar">Entrar de nuevo</button>
+    <button class="btn" id="b-error-volver">Volver donde estaba</button>
+  </section>
+</main>
+
+<script>
+(function(){
+  "use strict";
+
+  /* ---------- Utilidades ---------- */
+  var $ = function(id){ return document.getElementById(id); };
+  var DIAS = ["domingo","lunes","martes","miércoles","jueves","viernes","sábado"];
+  var MESES = ["enero","febrero","marzo","abril","mayo","junio","julio","agosto","septiembre","octubre","noviembre","diciembre"];
+  var NOMBRE = "Marta";
+  var ESPERA = 700; // milisegundos de «escribiendo…»
+
+  var PROFESIONALES = {
+    "Medicina general": { pro:"Dr. Andrés Villamizar", sede:"Sede Centro, piso 2" },
+    "Odontología":      { pro:"Dra. Lucía Herrera", sede:"Sede Norte, consultorio 5" },
+    "Optometría":       { pro:"Dra. Paula Rincón", sede:"Sede Centro, piso 1" },
+    "Pediatría":        { pro:"Dr. Camilo Duarte", sede:"Sede Sur, piso 3" },
+    "Otra especialidad":{ pro:"Dra. Marcela Ospina", sede:"Sede Norte, piso 4" }
+  };
+  var HORAS = { "En la mañana":"9:40 a. m.", "En la tarde":"3:20 p. m.", "A cualquier hora":"10:15 a. m." };
+
+  var estado = {
+    r: {},                // respuestas: tipo, hora, rango{etiqueta,d1,d2}, dias[]
+    mejoraActiva: null,   // cita que tiene activa la búsqueda de una más cercana
+    citas: [
+      { fecha:"martes 1 de diciembre", hora:"2:30 p. m.", tipo:"Odontología", sede:"Sede Norte, consultorio 5", pro:"Dra. Lucía Herrera" },
+      { fecha:"lunes 14 de diciembre", hora:"8:00 a. m.", tipo:"Optometría", sede:"Sede Centro, piso 1", pro:"Dra. Paula Rincón" }
+    ],
+    busquedas: [
+      { id:"ejemplo", tipo:"Pediatría", rango:"Busco entre el 30 de noviembre y el 14 de diciembre", resumen:"En la tarde · los lunes y miércoles" }
+    ],
+    busquedaActual: null,
+    pantallaAnterior: "p-chat",
+    gen: 0,               // se aumenta al reiniciar para cancelar mensajes en camino
+    primeraVez: true
+  };
+
+  /* ---------- Pantallas ---------- */
+  function mostrar(id){
+    ["p-entrar","p-chat","p-citas","p-error"].forEach(function(p){ $(p).hidden = (p !== id); });
+    estado.pantallaActual = id;
+  }
+
+  /* ---------- Hilo ---------- */
+  var hilo = $("hilo"), acciones = $("acciones");
+
+  function bajar(){
+    hilo.scrollTop = hilo.scrollHeight;
+    // segunda pasada tras la animación de entrada
+    setTimeout(function(){ hilo.scrollTop = hilo.scrollHeight; }, 60);
+  }
+  function limpiarAcciones(){ acciones.innerHTML = ""; }
+
+  function avatar(){
+    return '<div class="avatar" aria-hidden="true"><svg width="30" height="30" viewBox="0 0 30 30"><circle cx="15" cy="15" r="11" fill="#FBF5EC"/><circle cx="11.2" cy="13" r="1.7" fill="#231A14"/><circle cx="18.8" cy="13" r="1.7" fill="#231A14"/><path d="M9.8 17.5c1.3 2.6 9.1 2.6 10.4 0" fill="none" stroke="#231A14" stroke-width="2" stroke-linecap="round"/></svg></div>';
+  }
+
+  /* El asistente «escribe» y luego aparece su globo. Devuelve una promesa. */
+  function decir(html, paso){
+    var g = estado.gen;
+    return new Promise(function(res){
+      var t = document.createElement("div");
+      t.className = "fila";
+      t.dataset.paso = paso;
+      t.innerHTML = avatar() + '<div class="globo ellos escribiendo" aria-label="Su ayudante está escribiendo"><i></i><i></i><i></i></div>';
+      hilo.appendChild(t); bajar();
+      setTimeout(function(){
+        if(g !== estado.gen){ if(t.parentNode) t.remove(); return res(false); }
+        t.innerHTML = avatar() + '<div class="globo ellos">' + html + '</div>';
+        bajar(); res(true);
+      }, ESPERA);
+    });
+  }
+
+  function respuesta(texto, paso, conCambiar){
+    var f = document.createElement("div");
+    f.className = "fila yo"; f.dataset.paso = paso;
+    var g = document.createElement("div");
+    g.className = "globo yo"; g.textContent = texto;
+    f.appendChild(g);
+    if(conCambiar){
+      var b = document.createElement("button");
+      b.className = "cambiar"; b.type = "button";
+      b.textContent = "✎ Cambiar";
+      b.setAttribute("aria-label","Cambiar esta respuesta: " + texto);
+      b.addEventListener("click", function(){ volverA(paso); });
+      f.appendChild(b);
+    }
+    hilo.appendChild(f); bajar();
+  }
+
+  function tarjeta(clase, html, paso){
+    var t = document.createElement("div");
+    t.className = "tarjeta " + clase; t.dataset.paso = paso;
+    t.innerHTML = html;
+    hilo.appendChild(t); bajar();
+    return t;
+  }
+
+  function boton(texto, clase, fn, extra){
+    var b = document.createElement("button");
+    b.type = "button"; b.className = "btn " + (clase||"");
+    b.textContent = texto;
+    if(extra) b.classList.add(extra);
+    b.addEventListener("click", fn);
+    return b;
+  }
+  function rotulo(t){ var p = document.createElement("p"); p.className = "rotulo"; p.textContent = t; return p; }
+  function rejilla(){ var d = document.createElement("div"); d.className = "rejilla"; return d; }
+
+  /* ---------- Reiniciar / volver a un paso ---------- */
+  function cortarDesde(n){
+    estado.gen++;
+    Array.prototype.slice.call(hilo.children).forEach(function(el){
+      if(parseInt(el.dataset.paso,10) >= n) el.remove();
+    });
+    limpiarAcciones();
+    if(n <= 5 && estado.busquedaActual){ cancelarBusqueda(estado.busquedaActual.id, true); }
+  }
+
+  function empezarDeNuevo(){
+    estado.gen++;
+    hilo.innerHTML = ""; limpiarAcciones();
+    estado.busquedaActual = null; // la búsqueda activa sigue viva y se ve en «Mis citas»
+    estado.r = {};
+    mostrar("p-chat");
+    preguntar(0);
+  }
+
+  function volverA(paso){
+    cortarDesde(paso);
+    Object.keys(estado.r).forEach(function(k){
+      var orden = { tipo:0, hora:1, rango:2, dias:3 };
+      if(orden[k] >= paso) delete estado.r[k];
+    });
+    decir("Claro, lo cambiamos. Sin problema.", paso).then(function(ok){ if(ok) preguntar(paso, true); });
+  }
+
+  /* ---------- Preguntas ---------- */
+  function preguntar(n, sinSaludo){
+    var g = estado.gen;
+    limpiarAcciones();
+    var ok = function(){ return g === estado.gen; };
+
+    if(n === 0){
+      var saludo = sinSaludo ? "<b>¿Qué cita necesita?</b>" : "Hola, doña " + NOMBRE + ". Soy su ayudante. <b>¿Qué cita necesita?</b>";
+      decir(saludo, 0).then(function(v){
+        if(!v || !ok()) return;
+        acciones.appendChild(rotulo("Toque una opción:"));
+        ["Medicina general","Odontología","Optometría","Pediatría","Otra especialidad"].forEach(function(t){
+          acciones.appendChild(boton(t, "", function(){
+            estado.r.tipo = t; limpiarAcciones(); respuesta(t, 0, true); preguntar(1);
+          }));
+        });
+      });
+    }
+    else if(n === 1){
+      decir("Muy bien: <b>" + estado.r.tipo + "</b>. ¿A qué hora le queda mejor?", 1).then(function(v){
+        if(!v || !ok()) return;
+        ["En la mañana","En la tarde","A cualquier hora"].forEach(function(t){
+          acciones.appendChild(boton(t, "", function(){
+            estado.r.hora = t; limpiarAcciones(); respuesta(t, 1, true); preguntar(2);
+          }));
+        });
+      });
+    }
+    else if(n === 2){
+      decir("Entendido. <b>¿Para cuándo</b> necesita la cita?", 2).then(function(v){
+        if(!v || !ok()) return;
+        opcionesRango(ok);
+      });
+    }
+    else if(n === 3){
+      decir("¿Qué <b>días de la semana</b> le sirven? Puede tocar varios.", 3).then(function(v){
+        if(!v || !ok()) return;
+        var sel = {};
+        var panel = rejilla();
+        var botones = {};
+        var NOM = { 1:"Lunes",2:"Martes",3:"Miércoles",4:"Jueves",5:"Viernes",6:"Sábado" };
+        var listo = boton("Listo, seguir", "primario", function(){
+          var ids = Object.keys(sel).map(Number).sort();
+          if(!ids.length) return;
+          estado.r.dias = ids; limpiarAcciones();
+          respuesta(textoDias(ids), 3, true); preguntar(4);
+        });
+        listo.disabled = true; listo.classList.add("ancho");
+        function pintar(){
+          Object.keys(botones).forEach(function(k){
+            var on = !!sel[k];
+            botones[k].classList.toggle("marcado", on);
+            botones[k].setAttribute("aria-pressed", on ? "true" : "false");
+            botones[k].textContent = (on ? "✓ " : "") + NOM[k];
+          });
+          listo.disabled = !Object.keys(sel).length;
+        }
+        [1,2,3,4,5,6].forEach(function(d){
+          var b = boton(NOM[d], "", function(){ if(sel[d]) delete sel[d]; else sel[d] = true; pintar(); });
+          b.setAttribute("aria-pressed","false");
+          botones[d] = b; panel.appendChild(b);
+        });
+        var todos = boton("Cualquier día", "", function(){
+          sel = {1:1,2:1,3:1,4:1,5:1,6:1}; pintar();
+        }, "ancho");
+        panel.appendChild(todos); panel.appendChild(listo);
+        acciones.appendChild(panel);
+      });
+    }
+    else if(n === 4){
+      decir("Voy a buscar así: <b>" + estado.r.tipo + "</b>, " + estado.r.hora.toLowerCase() + ", " + rangoTexto(estado.r.rango) + ", " + textoDias(estado.r.dias).toLowerCase() + ". <b>¿Está bien?</b>", 4).then(function(v){
+        if(!v || !ok()) return;
+        acciones.appendChild(boton("Sí, busque la cita", "exito", function(){
+          limpiarAcciones(); respuesta("Sí, busque la cita", 4, false); iniciarBusqueda();
+        }));
+        acciones.appendChild(boton("No, quiero cambiar algo", "", function(){
+          limpiarAcciones();
+          decir("Con gusto. Toque <b>«Cambiar»</b> junto a lo que quiere corregir, o empezamos de cero.", 4).then(function(v2){
+            if(!v2 || !ok()) return;
+            acciones.appendChild(boton("Empezar de nuevo", "aviso", empezarDeNuevo));
+            acciones.appendChild(boton("Volver a la pregunta anterior", "", function(){ preguntar4Otra(); }));
+          });
+        }));
+      });
+    }
+  }
+  function preguntar4Otra(){ cortarDesde(4); preguntar(4); }
+
+  /* ---------- Fechas y rango ---------- */
+  var HOY = new Date(2026, 10, 24); // martes 24 de noviembre de 2026 (fecha de mentira para la maqueta)
+  function sumar(d, n){ var x = new Date(d); x.setDate(x.getDate() + n); return x; }
+  function fechaCorta(d){ return d.getDate() + " de " + MESES[d.getMonth()]; }
+  function fechaLarga(d){ return DIAS[d.getDay()] + " " + fechaCorta(d); }
+  function desdeCampo(v){ var p = v.split("-"); return new Date(+p[0], +p[1] - 1, +p[2]); }
+  function aCampo(d){ return d.getFullYear() + "-" + ("0" + (d.getMonth() + 1)).slice(-2) + "-" + ("0" + d.getDate()).slice(-2); }
+  function rangoTexto(rg){
+    var a = new Date(rg.d1), b = new Date(rg.d2);
+    if(a.getTime() === b.getTime()) return "solo el " + fechaCorta(a);
+    if(a.getMonth() === b.getMonth() && a.getFullYear() === b.getFullYear()) return "entre el " + a.getDate() + " y el " + fechaCorta(b);
+    return "entre el " + fechaCorta(a) + " y el " + fechaCorta(b);
+  }
+  function hacerRango(etiqueta, d1, d2){ return { etiqueta:etiqueta, d1:d1.getTime(), d2:d2.getTime() }; }
+
+  function elegirRango(rg){
+    estado.r.rango = rg; limpiarAcciones(); respuesta(rg.etiqueta, 2, true); preguntar(3);
+  }
+
+  function opcionesRango(ok){
+    limpiarAcciones();
+    var manana = sumar(HOY, 1);
+    acciones.appendChild(rotulo("Toque una opción:"));
+    acciones.appendChild(boton("Lo antes posible (próximos 7 días)", "", function(){
+      elegirRango(hacerRango("Lo antes posible (próximos 7 días)", manana, sumar(HOY, 7)));
+    }));
+    acciones.appendChild(boton("En los próximos 15 días", "", function(){
+      elegirRango(hacerRango("En los próximos 15 días", manana, sumar(HOY, 15)));
+    }));
+    acciones.appendChild(boton("Este mes", "", function(){
+      elegirRango(hacerRango("Este mes", manana, new Date(HOY.getFullYear(), HOY.getMonth() + 1, 0)));
+    }));
+    acciones.appendChild(boton("Elegir fechas", "primario", function(){ camposRango(ok); }));
+  }
+
+  function camposRango(ok){
+    limpiarAcciones();
+    acciones.appendChild(rotulo("Elija desde y hasta qué día:"));
+    var minimo = aCampo(sumar(HOY, 1)), maximo = aCampo(sumar(HOY, 90));
+    var l1 = document.createElement("label"); l1.setAttribute("for","f-desde"); l1.textContent = "Desde";
+    var c1 = document.createElement("input"); c1.type = "date"; c1.id = "f-desde"; c1.className = "campo";
+    var l2 = document.createElement("label"); l2.setAttribute("for","f-hasta"); l2.textContent = "Hasta";
+    var c2 = document.createElement("input"); c2.type = "date"; c2.id = "f-hasta"; c2.className = "campo";
+    c1.min = c2.min = minimo; c1.max = c2.max = maximo;
+    c1.value = minimo; c2.value = aCampo(sumar(HOY, 15));
+    var msg = document.createElement("p"); msg.className = "aviso-campo"; msg.setAttribute("role","alert"); msg.hidden = true;
+    var listo = boton("Listo, seguir", "primario", function(){
+      if(!validar()) return;
+      var a = desdeCampo(c1.value), b = desdeCampo(c2.value);
+      var mismoMes = a.getMonth() === b.getMonth() && a.getFullYear() === b.getFullYear();
+      var et = a.getTime() === b.getTime() ? "El " + fechaCorta(a) : "Del " + (mismoMes ? a.getDate() : fechaCorta(a)) + " al " + fechaCorta(b);
+      elegirRango(hacerRango(et, a, b));
+    });
+    function validar(){
+      var t = "";
+      if(!c1.value || !c2.value) t = "Falta una fecha. Toque «Desde» y «Hasta».";
+      else if(c1.value < minimo || c2.value < minimo) t = "Elija una fecha desde mañana en adelante.";
+      else if(c1.value > maximo || c2.value > maximo) t = "Elija fechas dentro de los próximos 3 meses.";
+      else if(c2.value < c1.value) t = "«Hasta» debe ser el mismo día de «Desde» o uno después.";
+      msg.textContent = t; msg.hidden = !t; listo.disabled = !!t;
+      return !t;
+    }
+    c1.addEventListener("input", validar); c2.addEventListener("input", validar);
+    [l1,c1,l2,c2,msg,listo].forEach(function(e){ acciones.appendChild(e); });
+    acciones.appendChild(boton("← Ver otras opciones", "", function(){ opcionesRango(ok); }));
+    validar();
+  }
+
+  function textoDias(ids){
+    if(ids.length === 6) return "Cualquier día";
+    var N = { 1:"lunes",2:"martes",3:"miércoles",4:"jueves",5:"viernes",6:"sábado" };
+    var t = ids.map(function(i){ return N[i]; });
+    if(t.length === 1) return "Solo el " + t[0];
+    var ult = t.pop();
+    return "Los " + t.join(", ") + " y " + ult;
+  }
+  function resumenCorto(){
+    var r = estado.r;
+    return r.hora + " · " + textoDias(r.dias).toLowerCase();
+  }
+
+  /* ---------- Búsqueda ---------- */
+  var contBusq = 0;
+  function iniciarBusqueda(){
+    var g = estado.gen;
+    var b = { id:"b"+(++contBusq), tipo:estado.r.tipo, rango:"Busco " + rangoTexto(estado.r.rango), resumen:resumenCorto(), r:JSON.parse(JSON.stringify(estado.r)) };
+    estado.busquedaActual = b;
+    estado.busquedas.push(b);
+
+    decir("<b>Ya estoy buscando.</b> Puede cerrar la aplicación: yo sigo y <b>le aviso</b> en cuanto aparezca su cita.", 5).then(function(v){
+      if(!v || g !== estado.gen) return;
+      var t = tarjeta("buscando",
+        '<div class="tope"><span class="radar" aria-hidden="true"></span>Buscando su cita…</div>' +
+        '<div class="cuerpo"><p class="resumen"><b>' + b.tipo + '</b><br>' + b.rango + '.<br>' + b.resumen + '</p></div>', 5);
+      t.id = "tarjeta-" + b.id;
+      acciones.appendChild(boton("■ Detener la búsqueda", "aviso", function(){ detenerBusqueda(b); }));
+      acciones.appendChild(boton("Simular: apareció una cita", "", function(){ apareceCita(b); }, "simular"));
+    });
+  }
+
+  function cancelarBusqueda(id, silencio){
+    estado.busquedas = estado.busquedas.filter(function(x){ return x.id !== id; });
+    if(estado.busquedaActual && estado.busquedaActual.id === id) estado.busquedaActual = null;
+  }
+
+  function detenerBusqueda(b){
+    var g = estado.gen;
+    cancelarBusqueda(b.id);
+    limpiarAcciones();
+    var t = $("tarjeta-" + b.id);
+    if(t){
+      t.className = "tarjeta detenida";
+      t.querySelector(".tope").innerHTML = "■ Búsqueda detenida";
+    }
+    decir("Listo, <b>paré la búsqueda</b>. No se reservó nada.", 6).then(function(v){
+      if(!v || g !== estado.gen) return;
+      acciones.appendChild(boton("Buscar otra vez lo mismo", "primario", function(){
+        limpiarAcciones(); estado.r = b.r; iniciarBusquedaDeNuevo();
+      }));
+      acciones.appendChild(boton("Pedir otra cita", "", empezarDeNuevo));
+    });
+  }
+  function iniciarBusquedaDeNuevo(){ cortarDesdeSinCancelar(5); iniciarBusqueda(); }
+  function cortarDesdeSinCancelar(n){
+    estado.gen++;
+    Array.prototype.slice.call(hilo.children).forEach(function(el){
+      if(parseInt(el.dataset.paso,10) >= n) el.remove();
+    });
+    limpiarAcciones();
+  }
+
+  /* Fechas dentro del rango que coinciden con los días elegidos (nunca domingo). */
+  function fechasDelRango(r){
+    var a = new Date(r.rango.d1), b = new Date(r.rango.d2), lista = [];
+    for(var d = new Date(a); d <= b; d = sumar(d, 1)){
+      if(d.getDay() !== 0 && r.dias.indexOf(d.getDay()) !== -1) lista.push(new Date(d));
+    }
+    return lista;
+  }
+  // La primera cita que se consigue es la última fecha posible del rango; así queda espacio para una más cercana.
+  function proximaFecha(r){
+    var l = fechasDelRango(r);
+    if(l.length) return l[l.length - 1];
+    var d = new Date(r.rango.d1);
+    while(d.getDay() === 0) d = sumar(d, 1);
+    return d;
+  }
+  function fechaMasCercana(cita){
+    var antes = fechasDelRango(cita.r).filter(function(d){ return d < cita.d; });
+    return antes.length ? antes[Math.floor(antes.length / 2)] : null;
+  }
+  var HORAS_CERCANAS = { "En la mañana":"8:10 a. m.", "En la tarde":"4:10 p. m.", "A cualquier hora":"11:30 a. m." };
+  var contCitas = 0;
+
+  function apareceCita(b){
+    var g = estado.gen;
+    limpiarAcciones();
+    cancelarBusqueda(b.id);
+    var viejo = $("tarjeta-" + b.id);
+    if(viejo){ viejo.className = "tarjeta detenida"; viejo.querySelector(".tope").innerHTML = "✓ Búsqueda terminada"; }
+    var info = PROFESIONALES[b.r.tipo];
+    var d = proximaFecha(b.r);
+    var cita = {
+      id:"c" + (++contCitas), d:d, r:b.r, mejora:false,
+      fecha: fechaLarga(d),
+      hora: HORAS[b.r.hora], tipo: b.r.tipo, sede: info.sede, pro: info.pro, nueva:true
+    };
+    estado.citas.unshift(cita);
+
+    decir("<b>¡Buenas noticias!</b> Apareció una cita y ya se la reservé.", 7).then(function(v){
+      if(!v || g !== estado.gen) return;
+      tarjeta("hecha",
+        '<div class="tope">✓ Cita reservada</div><div class="cuerpo">' +
+        dato("📅","Fecha", cita.fecha) +
+        dato("🕘","Hora", cita.hora) +
+        dato("📍","Sede", cita.sede) +
+        dato("🩺","Profesional", cita.pro + " · " + cita.tipo) +
+        '</div>', 7);
+      return decir("Le llegó un aviso al celular.", 7);
+    }).then(function(v){
+      if(!v || g !== estado.gen) return;
+      preguntarMejora(cita);
+    });
+  }
+
+  /* ---------- Seguir buscando una cita más cercana ---------- */
+  function botonesFinales(){
+    acciones.appendChild(boton("Pedir otra cita", "primario", empezarDeNuevo));
+    acciones.appendChild(boton("Ver mis citas", "", function(){ irACitas(); }));
+  }
+
+  function preguntarMejora(cita){
+    var g = estado.gen;
+    decir("<b>¿Quiere que siga buscando una cita más cercana?</b><br>Su cita del " + cita.fecha + " queda guardada. Si aparece una antes, se la cambio y le aviso.", 8).then(function(v){
+      if(!v || g !== estado.gen) return;
+      acciones.appendChild(boton("Sí, siga buscando", "exito", function(){
+        limpiarAcciones(); respuesta("Sí, siga buscando", 8, false); seguirBuscando(cita);
+      }));
+      acciones.appendChild(boton("No, esta me sirve", "", function(){
+        limpiarAcciones(); respuesta("No, esta me sirve", 8, false);
+        cita.mejora = false;
+        decir("Perfecto. <b>Su cita del " + cita.fecha + " queda reservada.</b> Que le vaya muy bien, doña " + NOMBRE + ". Si necesita algo más, aquí estoy.", 8).then(function(v2){
+          if(!v2 || g !== estado.gen) return;
+          botonesFinales();
+        });
+      }));
+    });
+  }
+
+  function botonesMejora(cita){
+    acciones.appendChild(boton("■ Dejar de buscar", "aviso", function(){ dejarDeBuscarMejora(cita, false); }));
+    acciones.appendChild(boton("Simular: apareció una más cercana", "", function(){ apareceMasCercana(cita); }, "simular"));
+  }
+
+  function seguirBuscando(cita){
+    var g = estado.gen;
+    cita.mejora = true; estado.mejoraActiva = cita;
+    decir("<b>Su cita está reservada y sigo buscando una más cercana.</b> Le aviso apenas aparezca.", 8).then(function(v){
+      if(!v || g !== estado.gen) return;
+      var t = tarjeta("buscando",
+        '<div class="tope"><span class="radar" aria-hidden="true"></span>Reservada · buscando una más cercana</div>' +
+        '<div class="cuerpo">' + dato("📅","Su cita de ahora", cita.fecha) + dato("🕘","Hora", cita.hora) + '</div>', 8);
+      t.id = "tarjeta-mejora-" + cita.id;
+      botonesMejora(cita);
+    });
+  }
+
+  function dejarDeBuscarMejora(cita, silencio){
+    var g = estado.gen;
+    var teniaPanel = (estado.mejoraActiva === cita);
+    cita.mejora = false;
+    if(teniaPanel) estado.mejoraActiva = null;
+    var t = $("tarjeta-mejora-" + cita.id);
+    if(t){ t.className = "tarjeta detenida"; t.querySelector(".tope").innerHTML = "■ Dejé de buscar una más cercana"; }
+    if(silencio){ if(teniaPanel && t){ limpiarAcciones(); botonesFinales(); } return; }
+    limpiarAcciones();
+    decir("Listo, <b>dejé de buscar</b>. Su cita del " + cita.fecha + " sigue reservada.", 8).then(function(v){
+      if(!v || g !== estado.gen) return;
+      botonesFinales();
+    });
+  }
+
+  function apareceMasCercana(cita){
+    var g = estado.gen;
+    limpiarAcciones();
+    var nd = fechaMasCercana(cita);
+    if(!nd){
+      decir("Por ahora no hay una fecha más cercana que la suya. <b>Sigo buscando.</b>", 8).then(function(v){
+        if(!v || g !== estado.gen) return;
+        botonesMejora(cita);
+      });
+      return;
+    }
+    var anterior = { fecha:cita.fecha, hora:cita.hora };
+    cita.d = nd; cita.fecha = fechaLarga(nd); cita.hora = HORAS_CERCANAS[cita.r.hora]; cita.nueva = true;
+    cita.mejora = false; estado.mejoraActiva = null;
+    var vieja = $("tarjeta-mejora-" + cita.id);
+    if(vieja){ vieja.className = "tarjeta detenida"; vieja.querySelector(".tope").innerHTML = "✓ Encontré una más cercana"; }
+
+    decir("<b>¡Buenas noticias!</b> Apareció una cita antes que la suya.", 8).then(function(v){
+      if(!v || g !== estado.gen) return;
+      tarjeta("hecha",
+        '<div class="tope">✓ Le conseguí una cita más cercana</div><div class="cuerpo">' +
+        '<div class="bloque antes"><span class="sello">Antes</span>' +
+          dato("📅","Fecha", anterior.fecha) + dato("🕘","Hora", anterior.hora) + '</div>' +
+        '<div class="bloque ahora"><span class="sello">✓ Ahora</span>' +
+          dato("📅","Fecha", cita.fecha) + dato("🕘","Hora", cita.hora) +
+          dato("📍","Sede", cita.sede) + dato("🩺","Profesional", cita.pro + " · " + cita.tipo) + '</div>' +
+        '</div>', 8);
+      return decir("Ya la cambié y le llegó un aviso al celular.", 8);
+    }).then(function(v){
+      if(!v || g !== estado.gen) return;
+      preguntarMejora(cita);
+    });
+  }
+  function dato(ico, rot, val){
+    return '<div class="dato"><span class="ico" aria-hidden="true">' + ico + '</span><div><small>' + rot + '</small><strong>' + val + '</strong></div></div>';
+  }
+
+  /* ---------- Mis citas ---------- */
+  function irACitas(){
+    estado.pantallaAnterior = "p-chat";
+    pintarCitas();
+    mostrar("p-citas");
+    $("p-citas").scrollTop = 0;
+  }
+  function pintarCitas(){
+    var lc = $("lista-citas"); lc.innerHTML = "";
+    var cont = document.createElement("div"); cont.style.cssText = "display:flex;flex-direction:column;gap:14px";
+    estado.citas.forEach(function(c){
+      var it = document.createElement("div"); it.className = "item" + (c.nueva ? " nueva" : "");
+      var etiqueta = c.mejora
+        ? '<span class="etiq mejora">🔎 Reservada · buscando una más cercana</span>'
+        : '<span class="etiq ok">✓ Reservada' + (c.nueva ? ' · nueva' : '') + '</span>';
+      it.innerHTML = etiqueta +
+        dato("📅","Fecha", c.fecha) + dato("🕘","Hora", c.hora) + dato("📍","Sede", c.sede) + dato("🩺","Profesional", c.pro + " · " + c.tipo);
+      if(c.mejora){
+        it.appendChild(boton("■ Dejar de buscar una más cercana", "aviso", function(){
+          dejarDeBuscarMejora(c, true); pintarCitas();
+        }));
+      }
+      cont.appendChild(it);
+    });
+    lc.appendChild(cont);
+
+    var lb = $("lista-busquedas"); lb.innerHTML = "";
+    if(!estado.busquedas.length){
+      var p = document.createElement("p"); p.className = "vacio"; p.textContent = "No tiene búsquedas activas en este momento."; lb.appendChild(p);
+    } else {
+      var c2 = document.createElement("div"); c2.style.cssText = "display:flex;flex-direction:column;gap:14px";
+      estado.busquedas.forEach(function(b){
+        var it = document.createElement("div"); it.className = "item";
+        it.innerHTML = '<span class="etiq busca">● Buscando ahora</span><div><strong style="font-size:22px">' + b.tipo + '</strong><br>' + b.rango + '.<br>' + b.resumen + '</div>';
+        it.appendChild(boton("■ Detener esta búsqueda", "aviso", function(){
+          cancelarBusqueda(b.id);
+          var t = $("tarjeta-" + b.id);
+          if(t){ t.className = "tarjeta detenida"; t.querySelector(".tope").innerHTML = "■ Búsqueda detenida"; limpiarAcciones(); }
+          pintarCitas();
+        }));
+        c2.appendChild(it);
+      });
+      lb.appendChild(c2);
+    }
+  }
+
+  /* ---------- Eventos ---------- */
+  $("form-entrar").addEventListener("submit", function(e){
+    e.preventDefault();
+    $("clave").value = "";
+    hilo.innerHTML = ""; limpiarAcciones(); estado.r = {};
+    mostrar("p-chat");
+    preguntar(0);
+  });
+  $("ver-clave").addEventListener("click", function(){
+    var c = $("clave"), ver = c.type === "password";
+    c.type = ver ? "text" : "password";
+    this.textContent = ver ? "Ocultar" : "Ver";
+    this.setAttribute("aria-pressed", ver ? "true" : "false");
+  });
+  $("b-mis-citas").addEventListener("click", irACitas);
+  $("b-reiniciar").addEventListener("click", empezarDeNuevo);
+  $("b-reiniciar-2").addEventListener("click", empezarDeNuevo);
+  $("b-volver-chat").addEventListener("click", function(){ mostrar("p-chat"); bajar(); });
+  $("b-ver-error").addEventListener("click", function(){ estado.pantallaAnterior = "p-citas"; mostrar("p-error"); });
+  $("b-reentrar").addEventListener("click", function(){ mostrar("p-entrar"); });
+  $("b-error-volver").addEventListener("click", function(){ mostrar(estado.pantallaAnterior); });
+
+  mostrar("p-entrar");
+})();
+</script>
+</body>
+</html>

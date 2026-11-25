@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>Mi Cita · propuestas</title>
+<style>
+  :root { --fondo:#f6f3ee; --tinta:#1c1b19; --suave:#55514a; --acento:#0b4f6c; --tarjeta:#ffffff; --borde:#d9d3c8; }
+  @media (prefers-color-scheme: dark) {
+    :root { --fondo:#16181a; --tinta:#f3f1ec; --suave:#b9b4aa; --acento:#8fd0ea; --tarjeta:#1f2326; --borde:#3a4045; }
+  }
+  * { box-sizing:border-box; }
+  body { margin:0; background:var(--fondo); color:var(--tinta);
+         font:20px/1.45 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+  main { max-width:640px; margin:0 auto; padding:32px 16px 48px; }
+  h1 { font-size:34px; line-height:1.15; margin:0 0 8px; }
+  p.intro { color:var(--suave); margin:0 0 28px; }
+  a.opcion { display:block; text-decoration:none; color:inherit; background:var(--tarjeta);
+             border:2px solid var(--borde); border-radius:18px; padding:20px; margin:0 0 16px; }
+  a.opcion:hover, a.opcion:focus-visible { border-color:var(--acento); outline:none; }
+  a.opcion strong { display:block; font-size:24px; color:var(--acento); margin-bottom:4px; }
+  a.opcion span { color:var(--suave); }
+  footer { margin-top:28px; font-size:17px; color:var(--suave); }
+</style>
+</head>
+<body>
+<main>
+  <h1>Mi Cita</h1>
+  <p class="intro">Tres ideas de cómo podría verse la app. Toque una para probarla. Para entrar sirve cualquier dato inventado.</p>
+
+  <a class="opcion" href="1/">
+    <strong>1. Paso a paso</strong>
+    <span>Una sola pregunta por pantalla, con botones grandes.</span>
+  </a>
+  <a class="opcion" href="2/">
+    <strong>2. Tablero</strong>
+    <span>Al abrir se ve la próxima cita y cómo va la búsqueda.</span>
+  </a>
+  <a class="opcion" href="3/">
+    <strong>3. Conversación</strong>
+    <span>Un asistente pregunta y usted responde tocando botones.</span>
+  </a>
+
+  <footer>Son maquetas de prueba: los datos son de mentira y no se conectan a ningún servicio.</footer>
+</main>
+</body>
+</html>
